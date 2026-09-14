@@ -55,23 +55,23 @@ Over a direct peer-to-peer LAN connection, it streams the **token consumption, e
 <br>
 
 <p align="center">
-  <img src="docs/images/demo_dock_liquid.gif" width="68%" alt="Liquid Physics Dock" />
+  <img src="docs/images/screenshot_ranking.png" width="48%" alt="Trends & Ranking" />
+  <img src="docs/images/screenshot_models_sheet.png" width="48%" alt="Models Sheet" />
 </p>
 
 <p align="center">
-  <em>Fig 4: Squash & Stretch liquid dynamics slider and frosted translucent floating dock</em>
+  <em>Fig 4: Bézier Trend Charts & Brand Icons · Fig 5: Detailed Model Breakdown Drawer</em>
 </p>
 
 <br>
 
 <p align="center">
-  <img src="docs/images/screenshot_ranking.png" width="31%" alt="Trends & Ranking" />
-  <img src="docs/images/screenshot_activity.png" width="31%" alt="Activity Heatmap" />
-  <img src="docs/images/screenshot_models_sheet.png" width="31%" alt="Models Sheet" />
+  <img src="docs/images/screenshot_activity.png" width="48%" alt="Activity Heatmap" />
+  <img src="docs/images/demo_dock_liquid.gif" width="48%" alt="Liquid Physics Dock" />
 </p>
 
 <p align="center">
-  <em>Fig 5: Bézier Trend Charts · Fig 6: GitHub-style Activity Matrix · Fig 7: Detailed Model Breakdown</em>
+  <em>Fig 6: GitHub-style 365-Day Activity Contribution Heatmap · Fig 7: Squash & Stretch Liquid Dynamics Slider & Frosted Dock</em>
 </p>
 
 ---
@@ -239,7 +239,8 @@ Token-Monitor-Android/
 ├── build-apk.bat                           # One-shot build batch script (CMD)
 ├── open-firewall.bat                       # One-click firewall rule for port 17321
 ├── PROJECT_MANUAL.md                       # Full project handbook (architecture and protocol details)
-└── README.md                               # Project documentation
+├── README.en.md                            # English documentation
+└── README.md                               # Simplified Chinese documentation
 ```
 
 ---

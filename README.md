@@ -24,6 +24,10 @@
   <a href="#-常见问题-faq">常见问题</a>
 </p>
 
+<p align="center">
+  <strong>简体中文</strong> · <a href="./README.en.md">English</a>
+</p>
+
 ---
 
 ## 📖 项目简介
@@ -51,23 +55,23 @@
 <br>
 
 <p align="center">
-  <img src="docs/images/demo_dock_liquid.gif" width="68%" alt="液态物理动效与磨砂底栏" />
+  <img src="docs/images/screenshot_ranking.png" width="48%" alt="用量走势与模型排行" />
+  <img src="docs/images/screenshot_models_sheet.png" width="48%" alt="全部模型名单抽屉" />
 </p>
 
 <p align="center">
-  <em>图 4：液态动力学（Squash & Stretch）物理阻尼滑块与磨砂半透明悬浮底栏</em>
+  <em>图 4：贝塞尔走势图与品牌标识 · 图 5：全部模型消耗明细抽屉</em>
 </p>
 
 <br>
 
 <p align="center">
-  <img src="docs/images/screenshot_ranking.png" width="31%" alt="用量走势与模型排行" />
-  <img src="docs/images/screenshot_activity.png" width="31%" alt="365天活动热力图" />
-  <img src="docs/images/screenshot_models_sheet.png" width="31%" alt="全部模型名单抽屉" />
+  <img src="docs/images/screenshot_activity.png" width="48%" alt="365天活动热力图" />
+  <img src="docs/images/demo_dock_liquid.gif" width="48%" alt="液态物理动效与磨砂底栏" />
 </p>
 
 <p align="center">
-  <em>图 5：贝塞尔走势图与品牌标识 · 图 6：GitHub 风格活动热力矩阵 · 图 7：模型消耗明细抽屉</em>
+  <em>图 6：GitHub 风格 365 天活动贡献热力矩阵 · 图 7：液态动力学（Squash & Stretch）物理阻尼滑块与磨砂半透明悬浮底栏</em>
 </p>
 
 ---
@@ -237,7 +241,8 @@ Token-Monitor-Android/
 ├── build-apk.bat                           # 一键构建批处理脚本 (CMD)
 ├── open-firewall.bat                       # 防火墙 17321 端口一键放行工具
 ├── PROJECT_MANUAL.md                       # 完整项目手册（架构与协议细节）
-└── README.md                               # 项目说明文档
+├── README.en.md                            # 英文说明文档
+└── README.md                               # 简体中文说明文档
 ```
 
 ---
