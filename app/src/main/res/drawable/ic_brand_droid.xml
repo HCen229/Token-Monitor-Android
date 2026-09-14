@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Factory Droid: Robot Head Vector -->
+    <!-- Antennas -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 7 3 L 5 1 M 17 3 L 19 1"
+        android:strokeWidth="1.6"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round" />
+    <!-- Dome Head -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 5 11 C 5 7.13 8.13 4 12 4 C 15.87 4 19 7.13 19 11 L 19 12 L 5 12 Z" />
+    <!-- Eyes -->
+    <path
+        android:fillColor="#FF141724"
+        android:pathData="M 8.5 7.5 A 1 1 0 0 1 8.5 9.5 A 1 1 0 0 1 8.5 7.5 Z M 15.5 7.5 A 1 1 0 0 1 15.5 9.5 A 1 1 0 0 1 15.5 7.5 Z" />
+    <!-- Body -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 5 13.5 H 19 C 19.55 13.5 20 13.95 20 14.5 V 18 C 20 19.66 18.66 21 17 21 H 7 C 5.34 21 4 19.66 4 18 V 14.5 C 4 13.95 4.45 13.5 5 13.5 Z" />
+</vector>

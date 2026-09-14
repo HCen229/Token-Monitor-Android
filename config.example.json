@@ -1,0 +1,8 @@
+{
+  "port": 3000,
+  "host": "0.0.0.0",
+  "hubSecret": "your-token-monitor-secret",
+  "webPin": "8888",
+  "currencyRate": 6.708,
+  "currencySymbol": "¥"
+}

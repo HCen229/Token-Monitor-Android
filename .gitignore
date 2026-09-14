@@ -1,0 +1,57 @@
+# Built artifacts & outputs
+TokenMonitor.apk
+TokenMonitor.apk.idsig
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+
+# Gradle & Build caches
+.gradle/
+build/
+app/build/
+*/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Local configuration & sensitive runtime data
+local.properties
+config.json
+data/store.json
+*.log
+tokenmonitor_crash.log
+debug.keystore
+
+# Internal development documents
+PROJECT_MANUAL.md
+
+# Duplicate Chinese-named scripts
+一键放行端口17321.bat
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.fleet/
+
+# Backups & archives
+_backup/
+*.zip
+*.tar.gz
+scratch/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
