@@ -45,22 +45,23 @@ Over a direct peer-to-peer LAN connection, it streams the **token consumption, e
 <p align="center">
   <img src="docs/images/demo_dashboard.gif" width="31%" alt="Dashboard Overview" />
   <img src="docs/images/demo_models_sheet.gif" width="31%" alt="Model Ranking Sheet" />
-  <img src="docs/images/screenshot_dashboard.png" width="31%" alt="Dashboard & Quota Rings" />
+  <img src="docs/images/demo_island_custom.gif" width="31%" alt="Live Notification Customizer" />
 </p>
 
 <p align="center">
-  <em>Fig 1: Live Dashboard Overview · Fig 2: All Models Ranking Sheet · Fig 3: Dual Quota Rings</em>
+  <em>Fig 1: Multi-dimensional Dashboard · Fig 2: Models Leaderboard & Drawer · Fig 3: Live Notification Customizer</em>
 </p>
 
 <br>
 
 <p align="center">
-  <img src="docs/images/screenshot_ranking.png" width="48%" alt="Trends & Ranking" />
-  <img src="docs/images/screenshot_models_sheet.png" width="48%" alt="Models Sheet" />
+  <img src="docs/images/screenshot_dashboard.png" width="31%" alt="Dashboard & Quota Rings" />
+  <img src="docs/images/screenshot_ranking.png" width="31%" alt="Trends & Ranking" />
+  <img src="docs/images/screenshot_models_sheet.png" width="31%" alt="Models Sheet" />
 </p>
 
 <p align="center">
-  <em>Fig 4: Bézier Trend Charts & Brand Icons · Fig 5: Detailed Model Breakdown Drawer</em>
+  <em>Fig 4: Dual Concentric Quota Rings · Fig 5: Bézier Trend Charts & Brand Icons · Fig 6: Detailed Model Breakdown Drawer</em>
 </p>
 
 <br>
@@ -71,7 +72,27 @@ Over a direct peer-to-peer LAN connection, it streams the **token consumption, e
 </p>
 
 <p align="center">
-  <em>Fig 6: GitHub-style 365-Day Activity Contribution Heatmap · Fig 7: Squash & Stretch Liquid Dynamics Slider & Frosted Dock</em>
+  <em>Fig 7: GitHub-style 365-Day Activity Contribution Heatmap · Fig 8: Squash & Stretch Liquid Dynamics Slider & Frosted Dock</em>
+</p>
+
+<br>
+
+<p align="center">
+  <img src="docs/images/demo_island_capsule.gif" width="70%" alt="Status Bar Capsule Transition" />
+</p>
+
+<p align="center">
+  <em>Fig 9: System Status Bar Dynamic Island Live Capsule (Idle ➔ Active Working Breathing Dot & Real-Time Token Sync)</em>
+</p>
+
+<br>
+
+<p align="center">
+  <img src="docs/images/screenshot_tablet.png" width="96%" alt="Tablet Dual-Pane Layout" />
+</p>
+
+<p align="center">
+  <em>Fig 10: Responsive Tablet & Large-Screen Dual-Pane Layout (Left: Metrics Overview & Heatmap · Right: Quotas & Model Breakdown)</em>
 </p>
 
 ---
@@ -118,8 +139,10 @@ The result is constantly glancing up and leaning over to check the monitor, whic
   - intuitive contribution breakdown across Cursor, Cline, Trae, Copilot and other clients;
   - anything beyond 7 entries is folded into an overview drawer to keep the main screen clean.
 
-### 2. Live Notifications
+### 2. Live Notifications & Dynamic Island
 
+- **Freely customizable capsule layout**: arrange elements on both sides of the front punch-hole camera (runtime status, today's tokens, remaining AI quota, today's cost, monthly tokens, or hidden) via intuitive drag-and-drop or tap placement, with a live WYSIWYG simulator preview.
+- **Real-time status bar capsule awareness**: adapts to front punch-hole screens and system status bars, automatically switching between "Idle" and "Working" (with breathing active green dot) while syncing live token counts in real time.
 - **Multi-mode quota calculation**: smart auto (picks the tightest limit or the cash balance), 5-hour rolling limits, weekly quota limits and cash balance modes.
 - **Automatic work-state detection**: token movement flips the state to "Working"; two minutes without change falls back to "Idle", matching a real development rhythm.
 
@@ -133,7 +156,7 @@ The result is constantly glancing up and leaning over to check the monitor, whic
 
 - **Floating liquid-glass bottom bar**: real-time Gaussian blur with physical spring snapping for natural, fluid touch interaction.
 - **Frosted progressive top bar**: while scrolling, the top bar transitions into a progressive Gaussian blur and blends seamlessly into the content.
-- **Responsive two-column layout**: purpose-built for tablets and landscape phones (core overview on the left, quotas and charts on the right) to make full use of the extra width.
+- **Responsive two-column layout**: purpose-built for tablets, foldables, and landscape phones (left: metrics overview, 365-day heatmap, and trends; right: quotas and model breakdown) to make full use of the extra width (see Fig 10).
 
 ### 5. Power Efficiency & Long-Lived Connection
 
@@ -238,6 +261,7 @@ Token-Monitor-Android/
 ├── build-apk.ps1                           # One-shot release build script (PowerShell)
 ├── build-apk.bat                           # One-shot build batch script (CMD)
 ├── open-firewall.bat                       # One-click firewall rule for port 17321
+├── docs/images/                            # Documentation screenshots and motion GIFs
 ├── PROJECT_MANUAL.md                       # Full project handbook (architecture and protocol details)
 ├── README.en.md                            # English documentation
 └── README.md                               # Simplified Chinese documentation

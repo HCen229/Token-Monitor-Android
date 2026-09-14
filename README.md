@@ -45,22 +45,23 @@
 <p align="center">
   <img src="docs/images/demo_dashboard.gif" width="31%" alt="看板概览与用量卡片" />
   <img src="docs/images/demo_models_sheet.gif" width="31%" alt="模型排行榜单与明细抽屉" />
-  <img src="docs/images/screenshot_dashboard.png" width="31%" alt="主屏数据与配额双环" />
+  <img src="docs/images/demo_island_custom.gif" width="31%" alt="实时通知元件自由编排" />
 </p>
 
 <p align="center">
-  <em>图 1：多维看板与用量流转 · 图 2：全部模型排行榜单 · 图 3：高精配额监控双环</em>
+  <em>图 1：多维看板与用量流转 · 图 2：全部模型排行榜单 · 图 3：实时通知元件自由编排</em>
 </p>
 
 <br>
 
 <p align="center">
-  <img src="docs/images/screenshot_ranking.png" width="48%" alt="用量走势与模型排行" />
-  <img src="docs/images/screenshot_models_sheet.png" width="48%" alt="全部模型名单抽屉" />
+  <img src="docs/images/screenshot_dashboard.png" width="31%" alt="主屏数据与配额双环" />
+  <img src="docs/images/screenshot_ranking.png" width="31%" alt="用量走势与模型排行" />
+  <img src="docs/images/screenshot_models_sheet.png" width="31%" alt="全部模型名单抽屉" />
 </p>
 
 <p align="center">
-  <em>图 4：贝塞尔走势图与品牌标识 · 图 5：全部模型消耗明细抽屉</em>
+  <em>图 4：高精配额监控双环 · 图 5：贝塞尔走势图与品牌标识 · 图 6：全部模型消耗明细抽屉</em>
 </p>
 
 <br>
@@ -71,7 +72,27 @@
 </p>
 
 <p align="center">
-  <em>图 6：GitHub 风格 365 天活动贡献热力矩阵 · 图 7：液态动力学（Squash & Stretch）物理阻尼滑块与磨砂半透明悬浮底栏</em>
+  <em>图 7：GitHub 风格 365 天活动贡献热力矩阵 · 图 8：液态动力学（Squash & Stretch）物理阻尼滑块与磨砂半透明悬浮底栏</em>
+</p>
+
+<br>
+
+<p align="center">
+  <img src="docs/images/demo_island_capsule.gif" width="70%" alt="灵动岛胶囊状态流转" />
+</p>
+
+<p align="center">
+  <em>图 9：系统状态栏胶囊实机状态流转（空闲中 ➔ 工作中呼吸绿点与 Token 实时变动感知）</em>
+</p>
+
+<br>
+
+<p align="center">
+  <img src="docs/images/screenshot_tablet.png" width="96%" alt="大屏与平板双栏自适应布局" />
+</p>
+
+<p align="center">
+  <em>图 10：响应式大屏与平板双栏排布（左侧用量全景与活动热力，右侧服务商配额与模型明细）</em>
 </p>
 
 ---
@@ -120,8 +141,10 @@
   - 直观统计 Cursor、Cline、Trae、Copilot 等不同客户端的贡献比例；
   - 数据超过 7 项时自动收纳至全览抽屉，保持主屏简洁。
 
-### 2. 实时通知
+### 2. 实时通知与灵动胶囊
 
+- **自由编排展示内容**：支持自由编排前置打孔屏摄像头两侧的展示元件（运行状态、今日 Token、AI 剩余用量、今日花费、本月 Token、不显示），支持拖拽放置与轻点挑选，界面内提供所见即所得仿真舱实时预览。
+- **状态栏胶囊实机感知**：深度兼容系统状态栏与打孔屏扩展，根据 AI 实时用量状态动态在「空闲中」与「工作中（呼吸绿点）」之间智能切换，毫秒级同步最新 Token 数值。
 - **多维度配额计算模式**：支持智能自动（自动捕获最紧张项或现金余额）、5 小时滚动限制、每周配额限制以及现金余额等多种匹配模式。
 - **智能工作状态感知**：检测到 Token 变动自动标记为「工作中」；连续 2 分钟无变动自动转入「空闲中」，契合真实开发节奏。
 
@@ -135,7 +158,7 @@
 
 - **悬浮液态玻璃底栏**：基于实时高斯模糊与物理弹簧吸附动效，触控交互自然流畅。
 - **毛玻璃渐进式顶栏**：滑动浏览时，顶栏自然过渡至渐进式高斯模糊，与内容无缝融合。
-- **响应式双栏排布**：针对平板设备与手机横屏专门适配（左侧核心概览，右侧配额与图表），充分利用宽屏显示空间。
+- **响应式双栏排布**：针对平板设备、折叠屏与手机横屏专门适配（左侧核心概览、365 天热力图与走势折线，右侧配额与模型明细），充分利用宽屏显示空间（参见图 10）。
 
 ### 5. 智能节能与长连接保活
 
@@ -240,6 +263,7 @@ Token-Monitor-Android/
 ├── build-apk.ps1                           # 一键 Release 构建脚本 (PowerShell)
 ├── build-apk.bat                           # 一键构建批处理脚本 (CMD)
 ├── open-firewall.bat                       # 防火墙 17321 端口一键放行工具
+├── docs/images/                            # 项目说明高清截图与动效演示 GIF
 ├── PROJECT_MANUAL.md                       # 完整项目手册（架构与协议细节）
 ├── README.en.md                            # 英文说明文档
 └── README.md                               # 简体中文说明文档
