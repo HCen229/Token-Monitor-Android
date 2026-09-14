@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Token Monitor Android</string>
+    <string name="notification_channel_focus_name">Token 实时监控 (状态栏与实时通知)</string>
+    <string name="notification_channel_focus_desc">实时监控 Token 用量与工作状态，支持状态栏实时通知、灵动岛与胶囊</string>
+    <string name="notification_channel_service_name">Token 后台同步服务</string>
+    <string name="notification_channel_service_desc">保持后台实时用量轮询与 Hub 稳定连接</string>
+</resources>

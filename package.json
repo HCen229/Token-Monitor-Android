@@ -1,0 +1,16 @@
+{
+  "name": "token-monitor-mobile-hub",
+  "version": "1.0.0",
+  "description": "Mobile-first Hub and PWA Dashboard for Token Monitor",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "token-monitor",
+    "pwa",
+    "mobile-dashboard"
+  ],
+  "license": "MIT"
+}

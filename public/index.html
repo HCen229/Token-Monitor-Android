@@ -1,0 +1,122 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#090D16">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Token Monitor</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="ambient-glow"></div>
+
+  <div class="app-container">
+    <!-- Top Nav -->
+    <header class="top-nav">
+      <div class="brand">
+        <img src="/icon.svg" alt="Logo" class="brand-icon">
+        <span class="brand-title">Token Monitor</span>
+      </div>
+      <div class="nav-actions">
+        <div id="statusBadge" class="status-badge">
+          <span class="status-dot"></span>
+          <span id="statusText">连接中...</span>
+        </div>
+        <button id="refreshBtn" class="btn-icon" title="刷新">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Tab Switcher -->
+    <div class="tab-switcher">
+      <button class="tab-btn active" data-tab="today">今日概览 (Today)</button>
+      <button class="tab-btn" data-tab="summary">全周期总计 (All-time)</button>
+    </div>
+
+    <!-- Hero Card: Dynamic Today or Summary -->
+    <section class="card hero-card">
+      <div class="card-header-row">
+        <span id="heroCardTag" class="card-tag">TODAY TOKENS</span>
+        <span id="heroDeviceName" class="device-name">--</span>
+      </div>
+      <div class="hero-main-metric">
+        <div id="heroMainNum" class="token-big-num">0</div>
+        <div class="token-sub-label">
+          <span id="heroApproxPill" class="approx-pill">≈ 0</span>
+          <span id="heroSubText">今日产生 Token</span>
+        </div>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric-item">
+          <span id="gridLabel1" class="metric-label">今日预计支出</span>
+          <span id="gridVal1" class="metric-val cost">¥0.00</span>
+        </div>
+        <div class="metric-item">
+          <span id="gridLabel2" class="metric-label">交互消息数</span>
+          <span id="gridVal2" class="metric-val">0 次</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Model Distribution Card -->
+    <section class="card">
+      <div class="section-title">
+        <span>今日模型消耗占比</span>
+        <span id="modelCountLabel" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 400;">0 个模型</span>
+      </div>
+      <div id="modelList" class="model-list">
+        <div style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 12px;">正在加载模型数据...</div>
+      </div>
+    </section>
+
+    <!-- Quotas & Limits Card -->
+    <section class="card">
+      <div class="section-title">
+        <span>AI 工具与账户额度</span>
+        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 400;">实时状态</span>
+      </div>
+      <div id="quotaGrid" class="quota-grid">
+        <div style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 12px;">正在拉取额度信息...</div>
+      </div>
+    </section>
+
+    <!-- 7-Day Trend Card -->
+    <section class="card">
+      <div class="section-title">
+        <span>近 7 天用量走势</span>
+        <span id="trendSummary" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 400;">--</span>
+      </div>
+      <div id="trendChart" class="chart-container">
+        <!-- Bars injected by JS -->
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="text-align: center; padding: 12px 0; font-size: 0.75rem; color: var(--text-muted);">
+      <span id="lastUpdatedLabel">最后同步: --</span>
+    </footer>
+  </div>
+
+  <!-- PIN Modal -->
+  <div id="pinModal" class="modal-overlay">
+    <div class="pin-modal">
+      <div class="pin-icon">🔐</div>
+      <h3 class="pin-title">安全验证</h3>
+      <p class="pin-subtitle">请输入 Web 访问 PIN 码</p>
+      <input type="password" id="pinInput" class="pin-input" maxlength="8" placeholder="••••" inputmode="numeric" autofocus>
+      <div id="pinError" class="error-msg"></div>
+      <button id="pinSubmitBtn" class="btn-primary">解 锁</button>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
