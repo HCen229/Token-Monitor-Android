@@ -17,6 +17,7 @@
 </p>
 
 <p align="center">
+  <a href="#-界面预览--preview">界面预览</a> ·
   <a href="#-主要功能">主要功能</a> ·
   <a href="#-快速上手">快速上手</a> ·
   <a href="#-编译与构建">编译构建</a> ·
@@ -32,6 +33,42 @@
 通过局域网点对点通信，它能把电脑上各 AI 编码工具（Cursor、Cline、Trae、Copilot 等）以及主流大模型（DeepSeek、Claude、OpenAI、Gemini、通义千问、Kimi、豆包等）的 **Token 消耗量、折算费用、请求统计、模型消耗占比与服务商剩余配额** 实时同步到手机，并以 **状态栏胶囊、实时通知与常驻状态栏** 的形式持续呈现。
 
 > **一句话概括**：手机上不打断当前操作，抬眼即可看清电脑端 AI 的用量与工作进度。
+
+---
+
+## 📱 界面预览 / Preview
+
+<p align="center">
+  <img src="docs/images/demo_dashboard.gif" width="31%" alt="看板概览与用量卡片" />
+  <img src="docs/images/demo_models_sheet.gif" width="31%" alt="模型排行榜单与明细抽屉" />
+  <img src="docs/images/screenshot_dashboard.png" width="31%" alt="主屏数据与配额双环" />
+</p>
+
+<p align="center">
+  <em>图 1：多维看板与用量流转 · 图 2：全部模型排行榜单 · 图 3：高精配额监控双环</em>
+</p>
+
+<br>
+
+<p align="center">
+  <img src="docs/images/demo_dock_liquid.gif" width="68%" alt="液态物理动效与磨砂底栏" />
+</p>
+
+<p align="center">
+  <em>图 4：液态动力学（Squash & Stretch）物理阻尼滑块与磨砂半透明悬浮底栏</em>
+</p>
+
+<br>
+
+<p align="center">
+  <img src="docs/images/screenshot_ranking.png" width="31%" alt="用量走势与模型排行" />
+  <img src="docs/images/screenshot_activity.png" width="31%" alt="365天活动热力图" />
+  <img src="docs/images/screenshot_models_sheet.png" width="31%" alt="全部模型名单抽屉" />
+</p>
+
+<p align="center">
+  <em>图 5：贝塞尔走势图与品牌标识 · 图 6：GitHub 风格活动热力矩阵 · 图 7：模型消耗明细抽屉</em>
+</p>
 
 ---
 

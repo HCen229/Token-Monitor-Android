@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="#-overview">Overview</a> ·
+  <a href="#-interface--motion-preview">Preview</a> ·
   <a href="#-features">Features</a> ·
   <a href="#-quick-start">Quick Start</a> ·
   <a href="#-build-from-source">Build</a> ·
@@ -37,6 +37,42 @@
 Over a direct peer-to-peer LAN connection, it streams the **token consumption, estimated cost, request statistics, per-model usage share and remaining provider quota** of your desktop AI coding tools (Cursor, Cline, Trae, Copilot, etc.) and mainstream models (DeepSeek, Claude, OpenAI, Gemini, Qwen, Kimi, Doubao and more) to your phone in real time, and keeps them visible through a **status bar capsule, live notifications and an ongoing status bar entry**.
 
 > **In one line**: without interrupting whatever you are doing on your phone, a single glance tells you the usage and progress of the AI running on your computer.
+
+---
+
+## 📱 Interface & Motion Preview
+
+<p align="center">
+  <img src="docs/images/demo_dashboard.gif" width="31%" alt="Dashboard Overview" />
+  <img src="docs/images/demo_models_sheet.gif" width="31%" alt="Model Ranking Sheet" />
+  <img src="docs/images/screenshot_dashboard.png" width="31%" alt="Dashboard & Quota Rings" />
+</p>
+
+<p align="center">
+  <em>Fig 1: Live Dashboard Overview · Fig 2: All Models Ranking Sheet · Fig 3: Dual Quota Rings</em>
+</p>
+
+<br>
+
+<p align="center">
+  <img src="docs/images/demo_dock_liquid.gif" width="68%" alt="Liquid Physics Dock" />
+</p>
+
+<p align="center">
+  <em>Fig 4: Squash & Stretch liquid dynamics slider and frosted translucent floating dock</em>
+</p>
+
+<br>
+
+<p align="center">
+  <img src="docs/images/screenshot_ranking.png" width="31%" alt="Trends & Ranking" />
+  <img src="docs/images/screenshot_activity.png" width="31%" alt="Activity Heatmap" />
+  <img src="docs/images/screenshot_models_sheet.png" width="31%" alt="Models Sheet" />
+</p>
+
+<p align="center">
+  <em>Fig 5: Bézier Trend Charts · Fig 6: GitHub-style Activity Matrix · Fig 7: Detailed Model Breakdown</em>
+</p>
 
 ---
 
