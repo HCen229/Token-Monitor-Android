@@ -313,7 +313,7 @@ Token-Monitor-Android/
 ## 🙏 致谢与开源参考
 
 - **桌面端核心**：[Javis603/token-monitor](https://github.com/Javis603/token-monitor) — 优秀的桌面端 AI Token 监控工具及 Hub 协议 (MIT)
-- **界面模糊组件**：[kyant0/backdrop](https://github.com/kyant0/backdrop) — 驱动硬件级 AGSL 液态毛玻璃模糊引擎 (Apache-2.0)
+- **界面模糊组件**：[Kyant0/AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass) — 驱动硬件级 AGSL 液态毛玻璃模糊引擎 (Apache-2.0)
 - **开源字体**：[JetBrains/JetBrainsMono](https://github.com/JetBrains/JetBrainsMono) — 现代等宽字体 (OFL 1.1)
 - **上游数据原型**：[junhoyeo/tokscale](https://github.com/junhoyeo/tokscale) — CLI Token 追踪分析原型 (MIT)
 - **架构参考**：
