@@ -64,6 +64,7 @@ import com.tokenmonitor.app.data.IslandConfig
 import com.tokenmonitor.app.data.IslandItemType
 import com.tokenmonitor.app.data.TokenStats
 import com.tokenmonitor.app.service.TokenNotificationManager
+import com.tokenmonitor.app.ui.i18n.LocalAppStrings
 import com.tokenmonitor.app.ui.theme.TmAccent
 import com.tokenmonitor.app.ui.theme.TmLive
 import com.tokenmonitor.app.ui.theme.TmPrimary
@@ -82,6 +83,8 @@ fun SuperIslandStudio(
     onConfigChange: (IslandConfig) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
+
     // Studio root layout coordinate tracker for 100% scroll-immune drag & drop
     var studioCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
     var leftSlotBoundsInStudio by remember { mutableStateOf<Rect?>(null) }
@@ -129,13 +132,13 @@ fun SuperIslandStudio(
                         .padding(end = 12.dp)
                 ) {
                     Text(
-                        text = "自定义",
+                        text = strings.islandStudioTitle,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = TmTextPrimary
                     )
                     Text(
-                        text = "自由编排摄像头两侧的展示内容，支持拖拽放置或点击挑选",
+                        text = strings.islandStudioDesc,
                         fontSize = 11.sp,
                         color = TmTextMuted
                     )
@@ -150,7 +153,7 @@ fun SuperIslandStudio(
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
                     Text(
-                        text = "恢复默认",
+                        text = strings.restoreDefaults,
                         fontSize = 11.sp,
                         color = TmAccent,
                         fontWeight = FontWeight.Medium,
@@ -174,8 +177,8 @@ fun SuperIslandStudio(
             ) {
                 // Left Slot (Locked to Working Status)
                 SingleSlotTarget(
-                    slotBadge = "左侧 (固定)",
-                    slotName = "运行状态",
+                    slotBadge = strings.leftSlotBadge,
+                    slotName = strings.leftSlotName,
                     item = IslandItemType.STATUS,
                     isHovered = false,
                     onClickSlot = {},
@@ -204,7 +207,7 @@ fun SuperIslandStudio(
 
                 // Right Slot (User customizable)
                 SingleSlotTarget(
-                    slotBadge = "右侧 (自定义)",
+                    slotBadge = strings.rightSlotBadge,
                     slotName = "",
                     item = config.rightItem,
                     isHovered = isHoveringRight,
@@ -239,13 +242,13 @@ fun SuperIslandStudio(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "可用元件仓库",
+                        text = strings.elementRepository,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TmTextSecondary
                     )
                     Text(
-                        text = "按住 ⠿ 拖拽放入，或轻点快速放置",
+                        text = strings.elementRepositoryHint,
                         fontSize = 10.sp,
                         color = TmTextMuted
                     )
@@ -265,9 +268,9 @@ fun SuperIslandStudio(
                             item = item,
                             isUsed = isUsed,
                             usedLocation = when {
-                                isLeft && isRight -> "左右"
-                                isLeft -> "左侧 (固定)"
-                                isRight -> "右侧"
+                                isLeft && isRight -> strings.badgeBoth
+                                isLeft -> strings.badgeLeftFixed
+                                isRight -> strings.badgeRight
                                 else -> null
                             },
                             studioCoords = studioCoords,
@@ -332,7 +335,7 @@ fun SuperIslandStudio(
                     .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
                 Text(
-                    text = draggingItem!!.title,
+                    text = strings.titleFor(draggingItem!!),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -345,12 +348,12 @@ fun SuperIslandStudio(
             AlertDialog(
                 onDismissRequest = { slotPickerTarget = null },
                 title = {
-                    Text(text = "选择放入【右侧区域】的内容", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TmTextPrimary)
+                    Text(text = strings.pickRightSlotTitle, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TmTextPrimary)
                 },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            text = "右侧在挖孔右侧独立呈现，可自由配置",
+                            text = strings.pickRightSlotSubtitle,
                             fontSize = 11.sp,
                             color = TmTextMuted
                         )
@@ -371,13 +374,13 @@ fun SuperIslandStudio(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = item.title,
+                                    text = strings.titleFor(item),
                                     fontSize = 12.sp,
                                     fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
                                     color = if (isCurrent) TmAccent else TmTextPrimary
                                 )
                                 if (isCurrent) {
-                                    Text(text = "当前", fontSize = 11.sp, color = TmAccent, fontWeight = FontWeight.Bold)
+                                    Text(text = strings.currentBadge, fontSize = 11.sp, color = TmAccent, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -385,7 +388,7 @@ fun SuperIslandStudio(
                 },
                 confirmButton = {
                     TextButton(onClick = { slotPickerTarget = null }) {
-                        Text("取消", color = TmTextMuted)
+                        Text(strings.cancel, color = TmTextMuted)
                     }
                 },
                 containerColor = Color(0xFF1E2128),
@@ -491,7 +494,8 @@ private fun SuperIslandLivePreview(
                             quotaMode = config.quotaMode
                         )
                     } else {
-                        Text(text = "空", fontSize = 11.sp, color = Color(0xFF555555))
+                        val strings = LocalAppStrings.current
+                        Text(text = if (strings.isEnglish) "Empty" else "空", fontSize = 11.sp, color = Color(0xFF555555))
                     }
                 }
             }
@@ -508,6 +512,7 @@ private fun ItemRenderView(
     selectedProvider: String,
     quotaMode: String = "auto"
 ) {
+    val strings = LocalAppStrings.current
     when (item) {
         IslandItemType.STATUS -> {
             Row(
@@ -529,9 +534,9 @@ private fun ItemRenderView(
                 )
                 Text(
                     text = when {
-                        !isConnected -> "离线"
-                        isWorking -> "工作中"
-                        else -> "空闲中"
+                        !isConnected -> strings.statusOffline
+                        isWorking -> strings.statusActive
+                        else -> strings.statusIdle
                     },
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
@@ -649,6 +654,7 @@ private fun SingleSlotTarget(
         }
 
         if (item == IslandItemType.NONE && !isLocked) {
+            val strings = LocalAppStrings.current
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -659,13 +665,14 @@ private fun SingleSlotTarget(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (isHovered) "松手放入此槽位" else "+ 拖入或点击挑选",
+                    text = if (isHovered) strings.releaseToPlace else strings.tapToPick,
                     fontSize = 11.sp,
                     color = if (isHovered) TmAccent else Color(0xFF8E8E93),
                     fontWeight = if (isHovered) FontWeight.Bold else FontWeight.Medium
                 )
             }
         } else {
+            val strings = LocalAppStrings.current
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -677,7 +684,7 @@ private fun SingleSlotTarget(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isHovered && !isLocked) "松手替换为当前" else item.title,
+                    text = if (isHovered && !isLocked) strings.replaceWithCurrent else strings.titleFor(item),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (isHovered && !isLocked) TmAccent else TmTextPrimary,
@@ -703,7 +710,7 @@ private fun SingleSlotTarget(
                     }
                 } else if (isLocked) {
                     Text(
-                        text = "已锁定",
+                        text = if (strings.isEnglish) "Locked" else "已锁定",
                         fontSize = 10.sp,
                         color = TmTextMuted,
                         fontWeight = FontWeight.Medium
@@ -725,6 +732,7 @@ private fun DraggableComponentChip(
     onDragEnd: () -> Unit,
     onClick: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     var chipCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
 
     val currentOnDragStart by rememberUpdatedState(onDragStart)
@@ -813,7 +821,7 @@ private fun DraggableComponentChip(
                     }
             ) {
                 Text(
-                    text = item.title,
+                    text = strings.titleFor(item),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     color = if (isUsed) Color.White else TmTextPrimary
@@ -846,8 +854,9 @@ private fun AiConfigurationCard(
     onSelectProvider: (String) -> Unit,
     onSelectQuotaMode: (String) -> Unit
 ) {
+    val strings = LocalAppStrings.current
     val providers = stats?.providers.orEmpty()
-    val providerOptions = mutableListOf("auto" to "自动选择 (最紧张)")
+    val providerOptions = mutableListOf("auto" to strings.autoSelectRecommended)
     if (providers.isNotEmpty()) {
         providers.forEach { p ->
             providerOptions.add(p.provider to "${p.provider.replaceFirstChar { it.uppercase() }}")
@@ -857,13 +866,17 @@ private fun AiConfigurationCard(
         providerOptions.add("anthropic" to "Claude")
         providerOptions.add("openai" to "OpenAI")
         providerOptions.add("deepseek" to "DeepSeek")
+        providerOptions.add("openrouter" to "OpenRouter")
+        providerOptions.add("minimax" to "MiniMax")
+        providerOptions.add("kimi" to "Kimi")
+        providerOptions.add("zai" to "GLM")
     }
 
     val quotaModes = listOf(
-        "auto" to "智能自动",
-        "5h" to "5小时限制",
-        "weekly" to "周限制",
-        "balance" to "余额模式"
+        "auto" to strings.modeAuto,
+        "5h" to strings.mode5h,
+        "weekly" to strings.modeWeekly,
+        "balance" to strings.modeBalance
     )
 
     Column(
@@ -877,7 +890,7 @@ private fun AiConfigurationCard(
     ) {
         // Section 1: Provider selection
         Text(
-            text = "AI 厂商选择：",
+            text = strings.aiProviderSelectTitle,
             fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
             color = Color(0xFF64D2FF)
@@ -914,7 +927,7 @@ private fun AiConfigurationCard(
 
         // Section 2: Quota Mode selection
         Text(
-            text = "AI 配额计算模式：",
+            text = strings.aiQuotaModeTitle,
             fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
             color = Color(0xFF64D2FF)
@@ -949,10 +962,10 @@ private fun AiConfigurationCard(
 
         Text(
             text = when (quotaMode.lowercase()) {
-                "5h" -> "优先匹配 5 小时滚动窗口剩余百分比（适合 Claude/Codex 快速窗口）"
-                "weekly" -> "优先匹配每周额度限制剩余百分比（适合周周期重置模型）"
-                "balance" -> "优先匹配现金余额（如 $12.50 或 ¥8.37）"
-                else -> "智能自动匹配最紧俏的周期额度或现金余额（如 DeepSeek 自动显示 ¥8.37）"
+                "5h" -> strings.desc5h
+                "weekly" -> strings.descWeekly
+                "balance" -> strings.descBalance
+                else -> strings.descAuto
             },
             fontSize = 10.sp,
             color = TmTextMuted

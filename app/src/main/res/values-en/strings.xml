@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Token Monitor Android</string>
+    <string name="notification_channel_focus_name">Token Live Monitor (Status Bar &amp; Live Notification)</string>
+    <string name="notification_channel_focus_desc">Real-time monitoring of Token usage and status, supporting status bar notification and dynamic island</string>
+    <string name="notification_channel_service_name">Token Background Sync Service</string>
+    <string name="notification_channel_service_desc">Maintains background polling and stable Hub connection</string>
+</resources>

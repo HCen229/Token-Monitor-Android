@@ -49,6 +49,7 @@ object BrandHelper {
             lower.contains("droid") || lower.contains("factory") -> R.drawable.ic_brand_droid
             lower.contains("openrouter") -> R.drawable.ic_brand_openrouter
             lower.contains("trae") -> R.drawable.ic_brand_trae
+            lower.contains("glm") || lower.contains("zhipu") || lower.contains("zai") || lower.contains("bigmodel") -> R.drawable.ic_brand_glm
             else -> R.drawable.ic_brand_token_monitor
         }
     }
@@ -76,6 +77,7 @@ object BrandHelper {
             lower.contains("droid") || lower.contains("factory") -> Color(0xFF10B981)
             lower.contains("openrouter") -> Color(0xFF6366F1)
             lower.contains("trae") -> Color(0xFF00E676)
+            lower.contains("glm") || lower.contains("zhipu") || lower.contains("zai") || lower.contains("bigmodel") -> Color(0xFF3860F4)
             else -> Color(0xFF64D2FF)
         }
     }

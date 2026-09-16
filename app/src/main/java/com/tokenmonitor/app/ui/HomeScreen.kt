@@ -127,6 +127,7 @@ import com.tokenmonitor.app.ui.glass.LiquidMaterial
 import com.tokenmonitor.app.ui.glass.LiquidSegmentedTabs
 import com.tokenmonitor.app.ui.glass.LocalLiquidGlassBackdrop
 import com.tokenmonitor.app.ui.glass.ProgressiveBlurHeader
+import com.tokenmonitor.app.ui.i18n.LocalAppStrings
 import com.tokenmonitor.app.ui.theme.TmAccent
 import com.tokenmonitor.app.ui.theme.TmAccentSoft
 import com.tokenmonitor.app.ui.theme.TmError
@@ -164,6 +165,9 @@ fun HomeScreen(viewModel: MainViewModel) {
     var showAllClientsSheet by remember { mutableStateOf(false) }
 
     var selectedNavTab by remember { mutableStateOf(HomeNavTab.HOME) }
+    androidx.activity.compose.BackHandler(enabled = selectedNavTab != HomeNavTab.HOME) {
+        selectedNavTab = HomeNavTab.HOME
+    }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -564,12 +568,13 @@ private fun DesktopTitleBar(
                 )
             }
 
+            val strings = LocalAppStrings.current
             Text(
                 text = when {
-                    isConnected -> if (host.isNotBlank()) "已连接至 $host" else "已连接至电脑端"
-                    isError && hasCachedData -> "连接已断开 · 已保留离线数据"
-                    isError -> "连接已断开"
-                    else -> "正在连接电脑端 Hub..."
+                    isConnected -> if (host.isNotBlank()) strings.statusConnected(host) else strings.statusRemote
+                    isError && hasCachedData -> strings.statusDisconnectedCached
+                    isError -> strings.statusDisconnected
+                    else -> strings.statusConnecting
                 },
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Normal,
@@ -708,10 +713,11 @@ private fun HeaderLiquidSegmentedTabs(
                             label = "headerTabText"
                         )
 
+                        val strings = LocalAppStrings.current
                         val label = when (tab) {
-                            PeriodTab.DAY -> "今日"
-                            PeriodTab.MONTH -> "本月"
-                            PeriodTab.TOTAL -> "全部"
+                            PeriodTab.DAY -> strings.periodDay
+                            PeriodTab.MONTH -> strings.periodMonth
+                            PeriodTab.TOTAL -> strings.periodTotal
                         }
 
                         Box(
@@ -757,10 +763,11 @@ private fun HeroTotalCard(
     lastUpdated: Long,
     isWideScreen: Boolean = false
 ) {
+    val strings = LocalAppStrings.current
     val periodTitle = when (period) {
-        PeriodTab.DAY -> "今日 Token"
-        PeriodTab.MONTH -> "本月 Token"
-        PeriodTab.TOTAL -> "全部 Token"
+        PeriodTab.DAY -> strings.todayTokens
+        PeriodTab.MONTH -> strings.monthTokens
+        PeriodTab.TOTAL -> strings.totalTokens
     }
 
     // Token & Cost rolling jumping animation matching desktop animateNumber(from, to, duration = 850)
@@ -813,7 +820,7 @@ private fun HeroTotalCard(
                 )
 
                 Text(
-                    text = "更新于 ${formatTime(lastUpdated)}",
+                    text = strings.lastUpdated(formatTime(lastUpdated)),
                     fontSize = if (isWideScreen) 11.sp else 10.sp,
                     color = TmTextMuted
                 )
@@ -907,14 +914,14 @@ private fun HeroTotalCard(
                 ) {
                     if (periodData.messageCount > 0) {
                         Text(
-                            text = "${periodData.messageCount} 请求次数",
+                            text = strings.messageCount(periodData.messageCount),
                             fontSize = if (isWideScreen) 12.5.sp else 11.sp,
                             color = TmTextSecondary
                         )
                     }
                     if (periodData.sessionCount > 0) {
                         Text(
-                            text = "${periodData.sessionCount} 会话",
+                            text = strings.sessionCount(periodData.sessionCount),
                             fontSize = if (isWideScreen) 12.5.sp else 11.sp,
                             color = TmTextSecondary
                         )
@@ -953,19 +960,20 @@ private fun AiToolLimitsCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val strings = LocalAppStrings.current
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "剩余用量",
+                        text = strings.remainingQuota,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TmTextMuted,
                         letterSpacing = 1.2.sp
                     )
                     Text(
-                        text = "${providers.size} 个服务商",
+                        text = strings.providerCount(providers.size),
                         fontSize = 10.sp,
                         color = Color(0xFF636366)
                     )
@@ -994,6 +1002,7 @@ private fun ProviderQuotaItem(
 ) {
     val themeMode = LocalThemeMode.current
     val isLight = themeMode == AppThemeMode.LIGHT
+    val strings = LocalAppStrings.current
 
     val quotaGroups = remember(provider.windows) {
         groupProviderWindows(provider.windows)
@@ -1060,6 +1069,63 @@ private fun ProviderQuotaItem(
                     fontWeight = FontWeight.SemiBold,
                     color = TmAccent
                 )
+            }
+        }
+
+        // Reset Credits Capsule (for Codex or any provider with reset credits)
+        if (provider.resetCreditsCount != null) {
+            val hasCredits = provider.resetCreditsCount > 0
+            val cardBg = if (hasCredits) {
+                if (isLight) Color(0x1010A37F) else Color(0x1C10A37F)
+            } else {
+                if (isLight) Color(0x0A000000) else Color(0x10FFFFFF)
+            }
+            val borderClr = if (hasCredits) {
+                if (isLight) Color(0x3510A37F) else Color(0x4510A37F)
+            } else {
+                if (isLight) Color(0x15000000) else Color(0x15FFFFFF)
+            }
+            val accentClr = if (hasCredits) {
+                if (isLight) Color(0xFF0D8A6A) else Color(0xFF34D399)
+            } else {
+                TmTextMuted
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(cardBg)
+                    .border(0.5.dp, borderClr, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 9.dp, vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(if (hasCredits) Color(0xFF10A37F) else TmTextMuted)
+                    )
+                    Text(
+                        text = if (hasCredits) strings.resetCreditsAvailable(provider.resetCreditsCount) else strings.resetCreditsNone,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = accentClr
+                    )
+                }
+
+                if (!provider.resetCreditsExpiry.isNullOrBlank()) {
+                    Text(
+                        text = strings.formatResetCreditsExpiry(provider.resetCreditsExpiry),
+                        fontSize = 10.5.sp,
+                        color = TmTextSecondary
+                    )
+                }
             }
         }
 
@@ -1152,8 +1218,14 @@ private fun QuotaDualRingColumnCard(
 
     val is5hOuter = ringOrderConfig == RingOrderConfig.OUTER_5H_INNER_WEEKLY
 
-    val outerWin = if (is5hOuter) sessionWin else weeklyWin
-    val innerWin = if (is5hOuter) weeklyWin else sessionWin
+    val (outerWin, innerWin) = when {
+        sessionWin != null && weeklyWin != null -> {
+            if (is5hOuter) sessionWin to weeklyWin else weeklyWin to sessionWin
+        }
+        sessionWin != null -> sessionWin to null
+        weeklyWin != null -> weeklyWin to null
+        else -> null to null
+    }
 
     val sessionRemaining = sessionWin?.remainingPercent?.toFloat()?.coerceIn(0f, 100f) ?: 100f
     val weeklyRemaining = weeklyWin?.remainingPercent?.toFloat()?.coerceIn(0f, 100f) ?: 100f
@@ -1170,24 +1242,25 @@ private fun QuotaDualRingColumnCard(
         else -> Color(0xFF0A84FF) // Sky Blue for Weekly
     }
 
-    val outerColor = if (is5hOuter) sessionColor else weeklyColor
-    val innerColor = if (is5hOuter) weeklyColor else sessionColor
+    val outerColor = if (outerWin == sessionWin) sessionColor else weeklyColor
+    val innerColor = if (innerWin == sessionWin) sessionColor else weeklyColor
 
-    val outerRemaining = if (is5hOuter) sessionRemaining else weeklyRemaining
-    val innerRemaining = if (is5hOuter) weeklyRemaining else sessionRemaining
+    val outerRemaining = outerWin?.remainingPercent?.toFloat()?.coerceIn(0f, 100f) ?: 100f
+    val innerRemaining = innerWin?.remainingPercent?.toFloat()?.coerceIn(0f, 100f) ?: 100f
 
-    val centerLabel = when (ringCenterTextConfig) {
-        RingCenterTextConfig.SESSION_5H -> {
+    val centerLabel = when {
+        outerWin != null && innerWin == null -> "${outerRemaining.toInt()}%"
+        ringCenterTextConfig == RingCenterTextConfig.WEEKLY -> {
             when {
-                sessionWin != null -> "${sessionRemaining.toInt()}%"
                 weeklyWin != null -> "${weeklyRemaining.toInt()}%"
+                sessionWin != null -> "${sessionRemaining.toInt()}%"
                 else -> ""
             }
         }
-        RingCenterTextConfig.WEEKLY -> {
+        else -> {
             when {
-                weeklyWin != null -> "${weeklyRemaining.toInt()}%"
                 sessionWin != null -> "${sessionRemaining.toInt()}%"
+                weeklyWin != null -> "${weeklyRemaining.toInt()}%"
                 else -> ""
             }
         }
@@ -1232,6 +1305,7 @@ private fun QuotaDualRingColumnCard(
             )
         }
 
+        val strings = LocalAppStrings.current
         // Text explanations below the rings (Outer first, Inner second)
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -1241,8 +1315,12 @@ private fun QuotaDualRingColumnCard(
             if (outerWin != null) {
                 val rawReset = outerWin.resetsAt ?: outerWin.resetDescription
                 val resetText = formatResetTime(rawReset)
-                val defaultLbl = if (is5hOuter) "5小时" else "周用量"
-                val cleanLabel = cleanWindowLabel(outerWin.label, group.title, defaultLbl)
+                val defaultLbl = when {
+                    outerWin.kind == "monthly" || outerWin.label.contains("月") -> strings.monthlyLimit
+                    outerWin == sessionWin -> strings.fiveHours
+                    else -> strings.weekly
+                }
+                val cleanLabel = strings.cleanWindowLabel(outerWin.label, group.title, defaultLbl)
                 val compactReset = resetText?.let { formatCompactResetTime(it) }
 
                 Row(
@@ -1262,7 +1340,7 @@ private fun QuotaDualRingColumnCard(
                                 .background(outerColor)
                         )
                         Text(
-                            text = "外环 · $cleanLabel",
+                            text = if (innerWin != null) strings.outerRing(cleanLabel) else cleanLabel,
                             fontSize = 10.5.sp,
                             color = TmTextSecondary,
                             maxLines = 1,
@@ -1280,7 +1358,7 @@ private fun QuotaDualRingColumnCard(
 
                 if (!compactReset.isNullOrBlank()) {
                     Text(
-                        text = "重置 $compactReset",
+                        text = strings.resetsIn(compactReset),
                         fontSize = 9.sp,
                         color = Color(0xFF64748B),
                         modifier = Modifier.padding(start = 9.dp),
@@ -1294,8 +1372,12 @@ private fun QuotaDualRingColumnCard(
             if (innerWin != null) {
                 val rawReset = innerWin.resetsAt ?: innerWin.resetDescription
                 val resetText = formatResetTime(rawReset)
-                val defaultLbl = if (is5hOuter) "周用量" else "5小时"
-                val cleanLabel = cleanWindowLabel(innerWin.label, group.title, defaultLbl)
+                val defaultLbl = when {
+                    innerWin.kind == "monthly" || innerWin.label.contains("月") -> strings.monthlyLimit
+                    innerWin == sessionWin -> strings.fiveHours
+                    else -> strings.weekly
+                }
+                val cleanLabel = strings.cleanWindowLabel(innerWin.label, group.title, defaultLbl)
                 val compactReset = resetText?.let { formatCompactResetTime(it) }
 
                 Row(
@@ -1315,7 +1397,7 @@ private fun QuotaDualRingColumnCard(
                                 .background(innerColor)
                         )
                         Text(
-                            text = "内环 · $cleanLabel",
+                            text = strings.innerRing(cleanLabel),
                             fontSize = 10.5.sp,
                             color = TmTextSecondary,
                             maxLines = 1,
@@ -1333,7 +1415,7 @@ private fun QuotaDualRingColumnCard(
 
                 if (!compactReset.isNullOrBlank()) {
                     Text(
-                        text = "重置 $compactReset",
+                        text = strings.resetsIn(compactReset),
                         fontSize = 9.sp,
                         color = Color(0xFF64748B),
                         modifier = Modifier.padding(start = 9.dp),
@@ -1414,6 +1496,7 @@ private fun ProviderQuotaBarsView(
                     )
                 }
 
+                val strings = LocalAppStrings.current
                 // 5-Hour / Session Bar
                 group.sessionWindow?.let { sessionWin ->
                     val rem = sessionWin.remainingPercent.toFloat().coerceIn(0f, 100f)
@@ -1422,7 +1505,7 @@ private fun ProviderQuotaBarsView(
                         rem < 50f -> TmWarning
                         else -> Color(0xFF30D158) // Emerald Green
                     }
-                    val label = cleanWindowLabel(sessionWin.label, group.title, "5小时用量")
+                    val label = strings.cleanWindowLabel(sessionWin.label, group.title, strings.fiveHours)
                     val rawReset = sessionWin.resetsAt ?: sessionWin.resetDescription
                     val resetText = formatResetTime(rawReset)
 
@@ -1443,7 +1526,7 @@ private fun ProviderQuotaBarsView(
                         rem < 50f -> TmWarning
                         else -> Color(0xFF0A84FF) // Sky Blue
                     }
-                    val label = cleanWindowLabel(weeklyWin.label, group.title, "周用量")
+                    val label = strings.cleanWindowLabel(weeklyWin.label, group.title, strings.weekly)
                     val rawReset = weeklyWin.resetsAt ?: weeklyWin.resetDescription
                     val resetText = formatResetTime(rawReset)
 
@@ -1514,12 +1597,13 @@ private fun QuotaProgressBarRow(
                 )
             }
 
+            val strings = LocalAppStrings.current
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = "${percent.toInt()}% 剩余",
+                    text = strings.percentRemaining(percent.toInt()),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = color
@@ -1555,7 +1639,13 @@ private data class QuotaGroup(
 )
 
 private fun groupProviderWindows(windows: List<WindowLimit>): List<QuotaGroup> {
-    val meterWindows = windows.filter { it.showMeter && it.remainingPercent >= 0.0 }
+    val meterWindows = windows.filter {
+        it.showMeter &&
+        !it.kind.equals("billing", ignoreCase = true) &&
+        !it.label.contains("balance", ignoreCase = true) &&
+        !it.label.contains("credit", ignoreCase = true) &&
+        it.remainingPercent >= 0.0
+    }
     if (meterWindows.isEmpty()) return emptyList()
 
     fun extractGroupKey(label: String): String {
@@ -1573,9 +1663,9 @@ private fun groupProviderWindows(windows: List<WindowLimit>): List<QuotaGroup> {
             val t = "${w.kind} ${w.label} ${w.resetDescription.orEmpty()}".lowercase()
             t.contains("5-hour") || t.contains("5 hour") || t.contains("5h") ||
             t.contains("session") || t.contains("short") || t.contains("hourly")
-        } ?: winList.firstOrNull()
+        }
 
-        val remainingList = winList.filter { it != session }
+        val remainingList = if (session != null) winList.filter { it != session } else winList
         val weekly = remainingList.firstOrNull { w ->
             val t = "${w.kind} ${w.label} ${w.resetDescription.orEmpty()}".lowercase()
             t.contains("week") || t.contains("7-day") || t.contains("7d") ||
@@ -1600,10 +1690,16 @@ private fun cleanWindowLabel(fullLabel: String, groupTitle: String, defaultLabel
     }
     val lower = s.lowercase()
     return when {
-        lower.contains("5-hour") || lower.contains("5 hour") || lower.contains("5h") -> "5小时"
-        lower.contains("session") -> "会话"
-        lower.contains("weekly") || lower.contains("week") -> "周用量"
-        lower.contains("monthly") || lower.contains("month") -> "月用量"
+        lower.contains("5-hour") || lower.contains("5 hour") || lower.contains("5h") -> if (s.contains("限额")) "5小时限额" else "5小时"
+        lower.contains("session") -> if (s.contains("限额")) "会话限额" else "会话"
+        lower.contains("weekly") || lower.contains("week") -> if (s.contains("限额")) "周限额" else "周用量"
+        lower.contains("monthly") || lower.contains("month") -> if (s.contains("限额")) "月限额" else "月用量"
+        s.contains("月限额") -> "月限额"
+        s.contains("月用量") -> "月用量"
+        s.contains("周限额") -> "周限额"
+        s.contains("周用量") -> "周用量"
+        s.contains("5小时限额") -> "5小时限额"
+        s.contains("5小时用量") || s.contains("5小时") -> if (s.contains("限额")) "5小时限额" else "5小时"
         s.isNotBlank() -> s
         else -> defaultLabel
     }
@@ -1636,8 +1732,14 @@ private fun QuotaGroupRow(
 
     val is5hOuter = ringOrderConfig == RingOrderConfig.OUTER_5H_INNER_WEEKLY
 
-    val outerWin = if (is5hOuter) sessionWin else weeklyWin
-    val innerWin = if (is5hOuter) weeklyWin else sessionWin
+    val (outerWin, innerWin) = when {
+        sessionWin != null && weeklyWin != null -> {
+            if (is5hOuter) sessionWin to weeklyWin else weeklyWin to sessionWin
+        }
+        sessionWin != null -> sessionWin to null
+        weeklyWin != null -> weeklyWin to null
+        else -> null to null
+    }
 
     val sessionRemaining = sessionWin?.remainingPercent?.toFloat()?.coerceIn(0f, 100f) ?: 100f
     val weeklyRemaining = weeklyWin?.remainingPercent?.toFloat()?.coerceIn(0f, 100f) ?: 100f
@@ -1654,24 +1756,25 @@ private fun QuotaGroupRow(
         else -> Color(0xFF0A84FF) // Sky Blue for Weekly
     }
 
-    val outerColor = if (is5hOuter) sessionColor else weeklyColor
-    val innerColor = if (is5hOuter) weeklyColor else sessionColor
+    val outerColor = if (outerWin == sessionWin) sessionColor else weeklyColor
+    val innerColor = if (innerWin == sessionWin) sessionColor else weeklyColor
 
-    val outerRemaining = if (is5hOuter) sessionRemaining else weeklyRemaining
-    val innerRemaining = if (is5hOuter) weeklyRemaining else sessionRemaining
+    val outerRemaining = outerWin?.remainingPercent?.toFloat()?.coerceIn(0f, 100f) ?: 100f
+    val innerRemaining = innerWin?.remainingPercent?.toFloat()?.coerceIn(0f, 100f) ?: 100f
 
-    val centerLabel = when (ringCenterTextConfig) {
-        RingCenterTextConfig.SESSION_5H -> {
+    val centerLabel = when {
+        outerWin != null && innerWin == null -> "${outerRemaining.toInt()}%"
+        ringCenterTextConfig == RingCenterTextConfig.WEEKLY -> {
             when {
-                sessionWin != null -> "${sessionRemaining.toInt()}%"
                 weeklyWin != null -> "${weeklyRemaining.toInt()}%"
+                sessionWin != null -> "${sessionRemaining.toInt()}%"
                 else -> ""
             }
         }
-        RingCenterTextConfig.WEEKLY -> {
+        else -> {
             when {
-                weeklyWin != null -> "${weeklyRemaining.toInt()}%"
                 sessionWin != null -> "${sessionRemaining.toInt()}%"
+                weeklyWin != null -> "${weeklyRemaining.toInt()}%"
                 else -> ""
             }
         }
@@ -1712,12 +1815,17 @@ private fun QuotaGroupRow(
                 )
             }
 
+            val strings = LocalAppStrings.current
             // First item: Outer Quota Text
             if (outerWin != null) {
                 val rawReset = outerWin.resetsAt ?: outerWin.resetDescription
                 val resetText = formatResetTime(rawReset)
-                val defaultLbl = if (is5hOuter) "5小时" else "周用量"
-                val cleanLabel = cleanWindowLabel(outerWin.label, group.title, defaultLbl)
+                val defaultLbl = when {
+                    outerWin.kind == "monthly" || outerWin.label.contains("月") -> strings.monthlyLimit
+                    outerWin == sessionWin -> strings.fiveHours
+                    else -> strings.weekly
+                }
+                val cleanLabel = strings.cleanWindowLabel(outerWin.label, group.title, defaultLbl)
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1735,14 +1843,14 @@ private fun QuotaGroupRow(
                                 .background(outerColor)
                         )
                         Text(
-                            text = "外环 · $cleanLabel",
+                            text = if (innerWin != null) strings.outerRing(cleanLabel) else cleanLabel,
                             fontSize = 11.sp,
                             color = TmTextSecondary
                         )
                     }
 
                     Text(
-                        text = "${outerRemaining.toInt()}% 剩余",
+                        text = strings.percentRemaining(outerRemaining.toInt()),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = outerColor
@@ -1751,7 +1859,7 @@ private fun QuotaGroupRow(
 
                 if (!resetText.isNullOrBlank()) {
                     Text(
-                        text = "重置: $resetText",
+                        text = strings.resetsIn(resetText),
                         fontSize = 9.sp,
                         color = Color(0xFF64748B),
                         modifier = Modifier.padding(start = 11.dp)
@@ -1763,8 +1871,12 @@ private fun QuotaGroupRow(
             if (innerWin != null) {
                 val rawReset = innerWin.resetsAt ?: innerWin.resetDescription
                 val resetText = formatResetTime(rawReset)
-                val defaultLbl = if (is5hOuter) "周用量" else "5小时"
-                val cleanLabel = cleanWindowLabel(innerWin.label, group.title, defaultLbl)
+                val defaultLbl = when {
+                    innerWin.kind == "monthly" || innerWin.label.contains("月") -> strings.monthlyLimit
+                    innerWin == sessionWin -> strings.fiveHours
+                    else -> strings.weekly
+                }
+                val cleanLabel = strings.cleanWindowLabel(innerWin.label, group.title, defaultLbl)
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1782,14 +1894,14 @@ private fun QuotaGroupRow(
                                 .background(innerColor)
                         )
                         Text(
-                            text = "内环 · $cleanLabel",
+                            text = strings.innerRing(cleanLabel),
                             fontSize = 11.sp,
                             color = TmTextSecondary
                         )
                     }
 
                     Text(
-                        text = "${innerRemaining.toInt()}% 剩余",
+                        text = strings.percentRemaining(innerRemaining.toInt()),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = innerColor
@@ -1798,7 +1910,7 @@ private fun QuotaGroupRow(
 
                 if (!resetText.isNullOrBlank()) {
                     Text(
-                        text = "重置: $resetText",
+                        text = strings.resetsIn(resetText),
                         fontSize = 9.sp,
                         color = Color(0xFF64748B),
                         modifier = Modifier.padding(start = 11.dp)
@@ -1828,7 +1940,7 @@ private fun QuotaGroupRow(
                         color = TmTextMuted
                     )
                     Text(
-                        text = "${rem.toInt()}% 剩余",
+                        text = strings.percentRemaining(rem.toInt()),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
                         color = color
@@ -1836,7 +1948,7 @@ private fun QuotaGroupRow(
                 }
                 if (!resetText.isNullOrBlank()) {
                     Text(
-                        text = "重置: $resetText",
+                        text = strings.resetsIn(resetText),
                         fontSize = 9.sp,
                         color = Color(0xFF64748B)
                     )
@@ -1972,13 +2084,14 @@ private fun ModelBreakdownCard(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            val strings = LocalAppStrings.current
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "模型排行",
+                    text = strings.modelBreakdown,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TmTextMuted,
@@ -1995,12 +2108,12 @@ private fun ModelBreakdownCard(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "共 ${models.size} 个模型",
+                            text = strings.modelCount(models.size),
                             fontSize = 10.5.sp,
                             color = TmTextMuted
                         )
                         Text(
-                            text = "查看全部 ›",
+                            text = strings.viewAll,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TmAccent
@@ -2008,7 +2121,7 @@ private fun ModelBreakdownCard(
                     }
                 } else {
                     Text(
-                        text = "共 ${models.size} 个模型",
+                        text = strings.modelCount(models.size),
                         fontSize = 10.5.sp,
                         color = TmTextMuted,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -2031,7 +2144,7 @@ private fun ModelBreakdownCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "查看全部 ${models.size} 个模型 ›",
+                        text = strings.viewAllModels(models.size),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TmPrimary
@@ -2137,13 +2250,14 @@ private fun ToolDistributionCard(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            val strings = LocalAppStrings.current
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "客户端用量",
+                    text = strings.clientBreakdown,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TmTextMuted,
@@ -2160,12 +2274,12 @@ private fun ToolDistributionCard(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "共 ${clients.size} 个客户端",
+                            text = strings.clientCount(clients.size),
                             fontSize = 10.5.sp,
                             color = TmTextMuted
                         )
                         Text(
-                            text = "查看全部 ›",
+                            text = strings.viewAll,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TmAccent
@@ -2173,7 +2287,7 @@ private fun ToolDistributionCard(
                     }
                 } else {
                     Text(
-                        text = "共 ${clients.size} 个客户端",
+                        text = strings.clientCount(clients.size),
                         fontSize = 10.5.sp,
                         color = TmTextMuted,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -2196,7 +2310,7 @@ private fun ToolDistributionCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "查看全部 ${clients.size} 个客户端 ›",
+                        text = strings.viewAllClients(clients.size),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TmPrimary
@@ -2277,12 +2391,13 @@ private fun AllModelsSheet(
     period: PeriodTab,
     onDismiss: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     val themeMode = LocalThemeMode.current
     val isLight = themeMode == AppThemeMode.LIGHT
     val periodLabel = when (period) {
-        PeriodTab.DAY -> "今日"
-        PeriodTab.MONTH -> "本月"
-        PeriodTab.TOTAL -> "全部"
+        PeriodTab.DAY -> strings.periodDay
+        PeriodTab.MONTH -> strings.periodMonth
+        PeriodTab.TOTAL -> strings.periodTotal
     }
 
     ModalBottomSheet(
@@ -2306,13 +2421,13 @@ private fun AllModelsSheet(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        text = "全部模型用量名单",
+                        text = strings.allModelsDetail,
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
                         color = TmTextPrimary
                     )
                     Text(
-                        text = "$periodLabel · 共 ${models.size} 个模型",
+                        text = "$periodLabel · ${strings.modelCount(models.size)}",
                         fontSize = 12.sp,
                         color = TmTextMuted
                     )
@@ -2470,6 +2585,7 @@ private fun AllClientsSheet(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            val strings = LocalAppStrings.current
             // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -2478,13 +2594,13 @@ private fun AllClientsSheet(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        text = "全部客户端用量名单",
+                        text = strings.allClientsDetail,
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
                         color = TmTextPrimary
                     )
                     Text(
-                        text = "共 ${clients.size} 个客户端",
+                        text = strings.clientCount(clients.size),
                         fontSize = 12.sp,
                         color = TmTextMuted
                     )
@@ -2628,13 +2744,14 @@ private fun SevenDayTrendCard(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            val strings = LocalAppStrings.current
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "7-DAY TREND · 用量趋势",
+                    text = if (strings.isEnglish) "7-DAY TREND · USAGE" else "7-DAY TREND · 用量趋势",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TmTextMuted,
@@ -2642,7 +2759,7 @@ private fun SevenDayTrendCard(
                 )
 
                 Text(
-                    text = "峰值 ${formatCompactTokens(peakDailyTokens)}",
+                    text = strings.peak(formatCompactTokens(peakDailyTokens)),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Medium,
                     color = TmAccent
@@ -2716,6 +2833,7 @@ private fun ErrorBanner(
     hasCachedData: Boolean = false,
     onRetry: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -2736,7 +2854,7 @@ private fun ErrorBanner(
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
-                    text = if (hasCachedData) "连接已断开 (已保留离线数据)" else "网络通讯异常",
+                    text = if (hasCachedData) strings.disconnectedCachedError else strings.networkAnomalyError,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (hasCachedData) Color(0xFFFF9F0A) else TmError
@@ -2751,7 +2869,7 @@ private fun ErrorBanner(
             }
 
             Text(
-                text = "重试",
+                text = strings.retry,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = TmAccent,

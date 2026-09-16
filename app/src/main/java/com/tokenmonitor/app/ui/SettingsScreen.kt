@@ -5,6 +5,8 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import com.tokenmonitor.app.ui.components.CodexOAuthDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,6 +29,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -62,9 +65,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tokenmonitor.app.BuildConfig
 import com.tokenmonitor.app.data.ConnectionConfig
+import com.tokenmonitor.app.data.provider.DirectProviderConfig
 import com.tokenmonitor.app.ui.components.SuperIslandStudio
 import com.tokenmonitor.app.ui.glass.LiquidActionButton
 import com.tokenmonitor.app.ui.glass.LiquidButtonTone
+import com.tokenmonitor.app.ui.i18n.LocalAppStrings
 import com.tokenmonitor.app.ui.theme.AppThemeMode
 import com.tokenmonitor.app.ui.theme.LocalThemeMode
 import com.tokenmonitor.app.ui.theme.TmAccent
@@ -86,6 +91,10 @@ fun SettingsScreen(
     val diagnostic by viewModel.diagnosticState.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
+    val currentLanguage by viewModel.language.collectAsState()
+    val directProviders by viewModel.directProviders.collectAsState()
+    val providerTestStates by viewModel.providerTestStates.collectAsState()
+    val strings = com.tokenmonitor.app.ui.i18n.LocalAppStrings.current
     val currentStats = (uiState as? UiState.Success)?.stats
         ?: (uiState as? UiState.Error)?.lastStats
     val isConnected = uiState is UiState.Success
@@ -96,11 +105,54 @@ fun SettingsScreen(
     var secret by remember(config.secret) { mutableStateOf(config.secret) }
     var interval by remember(config.refreshIntervalSec) { mutableStateOf(config.refreshIntervalSec.toString()) }
     var secretVisible by remember { mutableStateOf(false) }
+    var visibleKeyIds by remember { mutableStateOf(setOf<String>()) }
+    var expandedIds by remember { mutableStateOf(setOf<String>()) }
     var showCreditsPage by remember { mutableStateOf(false) }
+    var showProvidersList by remember { mutableStateOf(false) }
+    var editingProviderId by remember { mutableStateOf<String?>(null) }
 
     if (showCreditsPage) {
         AcknowledgementsScreen(
             onBack = { showCreditsPage = false },
+            modifier = modifier
+        )
+        return
+    }
+
+    val editingProvider = directProviders.firstOrNull { it.id == editingProviderId }
+    if (editingProvider != null) {
+        ConnectProviderDetailScreen(
+            provider = editingProvider,
+            testState = providerTestStates[editingProvider.id] ?: ProviderTestState(),
+            onBack = { editingProviderId = null },
+            onUpdate = { updated -> viewModel.updateDirectProvider(updated) },
+            onSave = { updated ->
+                viewModel.updateDirectProvider(updated)
+                viewModel.saveDirectProviders(
+                    directProviders.map { if (it.id == updated.id) updated else it }
+                )
+            },
+            onTest = { id, key -> viewModel.testDirectProvider(id, key) },
+            onOAuthExchange = { code, verifier, callback ->
+                viewModel.exchangeCodexOAuth(code, verifier, callback)
+            },
+            modifier = modifier
+        )
+        return
+    }
+
+    if (showProvidersList) {
+        ConnectProvidersScreen(
+            directProviders = directProviders,
+            onBack = { showProvidersList = false },
+            onSelectProvider = { editingProviderId = it },
+            onToggleEnable = { cfg, enabled ->
+                val updated = cfg.copy(enabled = enabled)
+                viewModel.updateDirectProvider(updated)
+                viewModel.saveDirectProviders(
+                    directProviders.map { if (it.id == updated.id) updated else it }
+                )
+            },
             modifier = modifier
         )
         return
@@ -156,6 +208,74 @@ fun SettingsScreen(
             unfocusedPlaceholderColor = TmTextMuted
         )
 
+        // 0. Language Settings Card
+        TmCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = strings.languageSectionTitle,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TmTextMuted,
+                        letterSpacing = 1.2.sp
+                    )
+                    Text(
+                        text = currentLanguage.getDisplayName(strings.isEnglish),
+                        fontSize = 11.sp,
+                        color = TmAccent,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isThemeLight) Color(0xFFF1F5F9) else Color(0x18FFFFFF))
+                        .padding(3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    val langOptions = listOf(
+                        com.tokenmonitor.app.data.AppLanguage.SYSTEM to strings.languageFollowSystem,
+                        com.tokenmonitor.app.data.AppLanguage.ZH to strings.languageZh,
+                        com.tokenmonitor.app.data.AppLanguage.EN to strings.languageEn
+                    )
+
+                    langOptions.forEach { (lang, label) ->
+                        val isSelected = currentLanguage == lang
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    if (isSelected) TmAccent else Color.Transparent
+                                )
+                                .clickable {
+                                    viewModel.updateLanguage(lang)
+                                }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = label,
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) Color.White else TmTextSecondary,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // 1. Connection Parameters Card
         TmCard(modifier = Modifier.fillMaxWidth()) {
             Column(
@@ -163,7 +283,7 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "连接参数",
+                    text = strings.connectionParams,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TmTextMuted,
@@ -174,8 +294,8 @@ fun SettingsScreen(
                 OutlinedTextField(
                     value = host,
                     onValueChange = { host = it },
-                    label = { Text("IP 地址") },
-                    placeholder = { Text("例如 192.168.1.100") },
+                    label = { Text(strings.ipAddress) },
+                    placeholder = { Text(strings.ipAddressPlaceholder) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = textFieldColors
@@ -185,7 +305,7 @@ fun SettingsScreen(
                 OutlinedTextField(
                     value = portText,
                     onValueChange = { portText = it },
-                    label = { Text("端口 (17321)") },
+                    label = { Text(strings.portLabel) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -196,11 +316,11 @@ fun SettingsScreen(
                 OutlinedTextField(
                     value = secret,
                     onValueChange = { secret = it },
-                    label = { Text("密钥 (Secret)") },
+                    label = { Text(strings.secretKey) },
                     visualTransformation = if (secretVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         Text(
-                            text = if (secretVisible) "隐藏" else "显示",
+                            text = if (secretVisible) strings.hideText else strings.showText,
                             modifier = Modifier
                                 .clickable { secretVisible = !secretVisible }
                                 .padding(8.dp),
@@ -217,7 +337,7 @@ fun SettingsScreen(
                 OutlinedTextField(
                     value = interval,
                     onValueChange = { interval = it },
-                    label = { Text("轮询间隔 (秒)") },
+                    label = { Text(strings.pollingInterval) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -238,14 +358,14 @@ fun SettingsScreen(
                             refreshIntervalSec = iv
                         )
                         viewModel.saveConfig(newCfg)
-                        Toast.makeText(context, "配置已保存", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, strings.configSaved, Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     tone = LiquidButtonTone.PRIMARY,
                     contentPadding = PaddingValues(vertical = 10.dp)
                 ) {
                     Text(
-                        text = "保存配置",
+                        text = strings.saveConfig,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -261,7 +381,7 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = "网络体检",
+                    text = strings.networkDiagnostics,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TmTextMuted,
@@ -279,7 +399,7 @@ fun SettingsScreen(
                     contentPadding = PaddingValues(vertical = 9.dp)
                 ) {
                     Text(
-                        text = if (diagnostic.isTesting) "正在检测..." else "检查连接",
+                        text = if (diagnostic.isTesting) strings.testing else strings.testConnection,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color.White
@@ -317,6 +437,65 @@ fun SettingsScreen(
             }
         }
 
+        // 2.5 Connect Providers Entrance Card
+        TmCard(modifier = Modifier.fillMaxWidth()) {
+            val enabledCount = directProviders.count { it.enabled }
+            val totalCount = directProviders.size
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { showProvidersList = true }
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = strings.directProvidersTitle,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TmTextPrimary
+                        )
+                        if (enabledCount > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0x1F30D158))
+                                    .padding(horizontal = 7.dp, vertical = 1.5.dp)
+                            ) {
+                                Text(
+                                    text = "$enabledCount/$totalCount",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF30D158)
+                                )
+                            }
+                        }
+                    }
+                    Text(
+                        text = strings.directProvidersSummary(enabledCount, totalCount),
+                        fontSize = 12.sp,
+                        color = TmTextSecondary
+                    )
+                }
+
+                Text(
+                    text = "›",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Light,
+                    color = TmTextMuted
+                )
+            }
+        }
+
         // 3. Live Notification Card
         TmCard(modifier = Modifier.fillMaxWidth()) {
             val isPermGranted = com.tokenmonitor.app.service.TokenNotificationManager.isPermissionGranted(context)
@@ -327,7 +506,7 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "实时通知",
+                    text = strings.liveNotification,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TmTextMuted,
@@ -340,7 +519,7 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "通知权限", fontSize = 13.sp, color = TmTextSecondary)
+                    Text(text = strings.notificationPermission, fontSize = 13.sp, color = TmTextSecondary)
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
@@ -348,7 +527,7 @@ fun SettingsScreen(
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = if (areNotifsEnabled && isPermGranted) "已开启" else "未开启",
+                            text = if (areNotifsEnabled && isPermGranted) strings.permissionGranted else strings.permissionDenied,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (areNotifsEnabled && isPermGranted) Color(0xFF30D158) else Color(0xFFFF453A)
@@ -362,9 +541,9 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "后台常驻服务", fontSize = 13.sp, color = TmTextSecondary)
+                    Text(text = strings.backgroundService, fontSize = 13.sp, color = TmTextSecondary)
                     Text(
-                        text = "运行中",
+                        text = strings.running,
                         fontSize = 12.sp,
                         color = TmAccent,
                         fontWeight = FontWeight.Medium
@@ -397,25 +576,33 @@ fun SettingsScreen(
                             activity?.moveTaskToBack(true)
                         },
                         tone = LiquidButtonTone.PRIMARY,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
                         modifier = Modifier.weight(1f).height(40.dp)
                     ) {
                         Text(
-                            text = "测试实时通知",
+                            text = strings.testLiveNotification,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            softWrap = false
                         )
                     }
                     LiquidActionButton(
                         onClick = { com.tokenmonitor.app.service.TokenNotificationManager.openNotificationSettings(context) },
                         tone = LiquidButtonTone.SECONDARY,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
                         modifier = Modifier.weight(1f).height(40.dp)
                     ) {
                         Text(
-                            text = "系统通知设置",
+                            text = strings.systemNotificationSettings,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Color.White
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            softWrap = false
                         )
                     }
                 }
@@ -432,13 +619,13 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "实时通知开关",
+                            text = strings.liveNotificationSwitch,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             color = TmTextPrimary
                         )
                         Text(
-                            text = "在状态栏与锁屏持续展示实时用量",
+                            text = strings.liveNotificationSwitchDesc,
                             fontSize = 10.sp,
                             color = TmTextMuted
                         )
@@ -477,14 +664,14 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "软件更新",
+                        text = strings.softwareUpdate,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TmTextMuted,
                         letterSpacing = 1.2.sp
                     )
                     Text(
-                        text = "GitHub 正式版",
+                        text = strings.githubOfficial,
                         fontSize = 11.sp,
                         color = TmAccent,
                         fontWeight = FontWeight.Medium
@@ -496,7 +683,7 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "当前版本", fontSize = 13.sp, color = TmTextSecondary)
+                    Text(text = strings.currentVersion, fontSize = 13.sp, color = TmTextSecondary)
                     Text(
                         text = "v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})",
                         fontSize = 12.sp,
@@ -513,9 +700,9 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = "检查更新", fontSize = 13.sp, color = TmTextSecondary)
+                            Text(text = strings.checkUpdate, fontSize = 13.sp, color = TmTextSecondary)
                             Text(
-                                text = "检查更新",
+                                text = strings.checkUpdate,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = TmAccent,
@@ -532,9 +719,9 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = "检查更新", fontSize = 13.sp, color = TmTextSecondary)
+                            Text(text = strings.checkUpdate, fontSize = 13.sp, color = TmTextSecondary)
                             Text(
-                                text = "检查中…",
+                                text = strings.checkingUpdate,
                                 fontSize = 12.sp,
                                 color = TmTextMuted,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -547,9 +734,9 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = "检查更新", fontSize = 13.sp, color = TmTextSecondary)
+                            Text(text = strings.checkUpdate, fontSize = 13.sp, color = TmTextSecondary)
                             Text(
-                                text = "已是最新",
+                                text = strings.upToDate,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = Color(0xFF30D158),
@@ -571,21 +758,21 @@ fun SettingsScreen(
                                 verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Text(
-                                    text = "发现新版本 ${state.info.displayVersionLabel()}",
+                                    text = "${strings.newVersionFound} ${state.info.displayVersionLabel()}",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF30D158)
                                 )
                                 if (state.info.apkSize > 0) {
                                     Text(
-                                        text = "大小: ${DownloadProgress.formatBytes(state.info.apkSize)}",
+                                        text = "${strings.packageSize}: ${DownloadProgress.formatBytes(state.info.apkSize)}",
                                         fontSize = 11.sp,
                                         color = TmTextMuted
                                     )
                                 }
                             }
                             Text(
-                                text = "立即下载",
+                                text = strings.downloadNow,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF30D158),
@@ -611,7 +798,7 @@ fun SettingsScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = "正在下载 ${state.info.displayVersionLabel()}",
+                                    text = "${strings.downloading} ${state.info.displayVersionLabel()}",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF64D2FF)
@@ -649,15 +836,15 @@ fun SettingsScreen(
                                 verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Text(
-                                    text = "${state.info.displayVersionLabel()} 安装包已就绪",
+                                    text = "${state.info.displayVersionLabel()} ${strings.readyToInstall}",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF30D158)
                                 )
-                                Text(text = "下载完成，点击立即开始安装", fontSize = 11.sp, color = TmTextMuted)
+                                Text(text = strings.readyToInstallDesc, fontSize = 11.sp, color = TmTextMuted)
                             }
                             Text(
-                                text = "立即安装",
+                                text = strings.installNow,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF30D158),
@@ -685,7 +872,7 @@ fun SettingsScreen(
                                 verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Text(
-                                    text = "更新检查提示",
+                                    text = strings.updateNotice,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFFF453A)
@@ -698,7 +885,7 @@ fun SettingsScreen(
                                 )
                             }
                             Text(
-                                text = "重试",
+                                text = strings.retry,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TmAccent,
@@ -720,7 +907,7 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "关于",
+                    text = strings.about,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TmTextMuted,
@@ -731,7 +918,7 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "版本", fontSize = 12.sp, color = TmTextSecondary)
+                    Text(text = strings.version, fontSize = 12.sp, color = TmTextSecondary)
                     Text(
                         text = "v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})",
                         fontSize = 12.sp,
@@ -744,7 +931,7 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "开源仓库", fontSize = 12.sp, color = TmTextSecondary)
+                    Text(text = strings.openSourceRepo, fontSize = 12.sp, color = TmTextSecondary)
                     Text(text = "hcen229/Token-Monitor-Android", fontSize = 12.sp, color = TmAccent, fontWeight = FontWeight.Medium)
                 }
 
@@ -752,7 +939,7 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "渲染引擎", fontSize = 12.sp, color = TmTextSecondary)
+                    Text(text = strings.renderEngine, fontSize = 12.sp, color = TmTextSecondary)
                     Text(text = "Backdrop (Hardware AGSL)", fontSize = 12.sp, color = TmAccent, fontWeight = FontWeight.Medium)
                 }
 
@@ -760,7 +947,7 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "同步协议", fontSize = 12.sp, color = TmTextSecondary)
+                    Text(text = strings.syncProtocol, fontSize = 12.sp, color = TmTextSecondary)
                     Text(text = "Hub Sync v1", fontSize = 12.sp, color = TmTextPrimary)
                 }
 
@@ -777,24 +964,34 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 8.dp)
+                    ) {
                         Text(
-                            text = "开源鸣谢名单",
+                            text = strings.openSourceCredits,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
-                            color = TmTextPrimary
+                            color = TmTextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "向灵感来源与开源先驱致敬",
+                            text = strings.openSourceCreditsSubtitle,
                             fontSize = 10.sp,
-                            color = TmTextMuted
+                            color = TmTextMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                     Text(
-                        text = "查看 ↗",
+                        text = strings.viewCredits,
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = TmAccent
+                        color = TmAccent,
+                        maxLines = 1,
+                        softWrap = false
                     )
                 }
             }
@@ -834,13 +1031,13 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Text(
-                        text = "设置",
+                        text = strings.settingsTitle,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = TmTextPrimary
                     )
                     Text(
-                        text = "连接参数与实时通知配置",
+                        text = strings.settingsSubtitle,
                         fontSize = 12.sp,
                         color = TmTextMuted
                     )
@@ -859,7 +1056,7 @@ fun SettingsScreen(
                     onDismissRequest = { viewModel.dismissUpdateDialog() },
                     title = {
                         Text(
-                            text = "发现新版本 ${info.displayVersionLabel()}",
+                            text = strings.updateDialogTitle(info.displayVersionLabel()),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = TmTextPrimary
@@ -871,19 +1068,19 @@ fun SettingsScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("当前版本: v${BuildConfig.VERSION_NAME}", fontSize = 12.sp, color = TmTextMuted)
-                                Text("最新版本: ${info.displayVersionLabel()}", fontSize = 12.sp, color = TmAccent, fontWeight = FontWeight.Bold)
+                                Text(strings.updateDialogCurrent("v${BuildConfig.VERSION_NAME}"), fontSize = 12.sp, color = TmTextMuted)
+                                Text(strings.updateDialogLatest(info.displayVersionLabel()), fontSize = 12.sp, color = TmAccent, fontWeight = FontWeight.Bold)
                             }
                             if (info.apkSize > 0) {
                                 Text(
-                                    text = "安装包大小: ${DownloadProgress.formatBytes(info.apkSize)}",
+                                    text = strings.updateDialogSize(DownloadProgress.formatBytes(info.apkSize)),
                                     fontSize = 11.sp,
                                     color = TmTextMuted
                                 )
                             }
                             if (info.releaseNotes.isNotBlank()) {
                                 Text(
-                                    text = "更新内容:",
+                                    text = strings.updateDialogReleaseNotes,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = TmTextPrimary
@@ -907,12 +1104,12 @@ fun SettingsScreen(
                     },
                     confirmButton = {
                         TextButton(onClick = { viewModel.startDownload(info) }) {
-                            Text("下载并安装", color = TmAccent, fontWeight = FontWeight.Bold)
+                            Text(strings.updateDialogDownload, color = TmAccent, fontWeight = FontWeight.Bold)
                         }
                     },
                     dismissButton = {
                         TextButton(onClick = { viewModel.dismissUpdateDialog() }) {
-                            Text("稍后", color = TmTextMuted)
+                            Text(strings.updateDialogLater, color = TmTextMuted)
                         }
                     },
                     containerColor = Color(0xFF1E2128),
@@ -926,7 +1123,7 @@ fun SettingsScreen(
                     onDismissRequest = { viewModel.dismissUpdateDialog() },
                     title = {
                         Text(
-                            text = "安装包准备就绪",
+                            text = strings.updateDialogReadyTitle,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = TmTextPrimary
@@ -934,7 +1131,7 @@ fun SettingsScreen(
                     },
                     text = {
                         Text(
-                            text = "新版本 ${state.info.displayVersionLabel()} 安装包已下载完成。点击立即安装，若系统提示阻止，请允许开启「安装未知应用」权限。",
+                            text = strings.updateDialogReadyMessage(state.info.displayVersionLabel()),
                             fontSize = 13.sp,
                             color = TmTextSecondary,
                             lineHeight = 19.sp
@@ -946,12 +1143,12 @@ fun SettingsScreen(
                                 viewModel.openInstallPermissionSettings()
                             }
                         }) {
-                            Text("立即安装", color = TmAccent, fontWeight = FontWeight.Bold)
+                            Text(strings.installNow, color = TmAccent, fontWeight = FontWeight.Bold)
                         }
                     },
                     dismissButton = {
                         TextButton(onClick = { viewModel.dismissUpdateDialog() }) {
-                            Text("稍后", color = TmTextMuted)
+                            Text(strings.updateDialogLater, color = TmTextMuted)
                         }
                     },
                     containerColor = Color(0xFF1E2128),
@@ -976,62 +1173,14 @@ fun AcknowledgementsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    BackHandler { onBack() }
     val context = LocalContext.current
+    val strings = com.tokenmonitor.app.ui.i18n.LocalAppStrings.current
     val themeMode = LocalThemeMode.current
     val isLight = themeMode == AppThemeMode.LIGHT
 
-    val projects = remember {
-        listOf(
-            CreditProject(
-                name = "Token Monitor Android",
-                repo = "hcen229/Token-Monitor-Android",
-                url = "https://github.com/hcen229/Token-Monitor-Android",
-                description = "Token Monitor 原生 Android 客户端应用，支持与桌面端无缝同步、实时状态栏通知、灵动岛监控与多服务商限额可视化。",
-                tags = listOf("本项目", "原生应用", "MIT")
-            ),
-            CreditProject(
-                name = "Token Monitor 桌面端",
-                repo = "Javis603/token-monitor",
-                url = "https://github.com/Javis603/token-monitor",
-                description = "原版桌面端 Token 统计监控工具，提供核心数据同步协议规范、多服务商额度聚合与经典桌面端监控逻辑。",
-                tags = listOf("原版核心", "数据协议", "MIT")
-            ),
-            CreditProject(
-                name = "Backdrop",
-                repo = "kyant0/backdrop",
-                url = "https://github.com/kyant0/backdrop",
-                description = "通过 Gradle 依赖直接引入的外部开源库（io.github.kyant0:backdrop），用于驱动 Android 13+ 实时硬件级液态毛玻璃与光学高斯模糊。",
-                tags = listOf("第三方依赖", "AGSL引擎", "Apache-2.0")
-            ),
-            CreditProject(
-                name = "JetBrains Mono",
-                repo = "JetBrains/JetBrainsMono",
-                url = "https://github.com/JetBrains/JetBrainsMono",
-                description = "直接内置于 APK 资源目录（res/font/）的开源等宽字体资产，为全应用提供高清晰度的数字对齐与代码阅读质感。",
-                tags = listOf("内置字体", "OFL 1.1")
-            ),
-            CreditProject(
-                name = "Tokscale",
-                repo = "junhoyeo/tokscale",
-                url = "https://github.com/junhoyeo/tokscale",
-                description = "极简高效的命令行 Token 追踪分析工具，为桌面端与跨端数据结构提供了上游模型设计与解析原型。",
-                tags = listOf("上游原型", "数据解析", "MIT")
-            ),
-            CreditProject(
-                name = "SignalDock",
-                repo = "jizizr/signaldock",
-                url = "https://github.com/jizizr/signaldock",
-                description = "针对 Android 物理打孔屏左右腔体分离、悬浮避让与灵动岛通知交互架构提供设计参考。",
-                tags = listOf("技术参考", "MIT")
-            ),
-            CreditProject(
-                name = "Capsulyric",
-                repo = "FrancoGiudans/Capsulyric",
-                url = "https://github.com/FrancoGiudans/Capsulyric",
-                description = "针对国产系统（ColorOS 流体云、HyperOS 焦点通知等）私有状态栏通知 Extras 键名与协议参数提供互操作性技术参考。",
-                tags = listOf("技术参考", "GPL-3.0")
-            )
-        )
+    val projects = remember(strings) {
+        strings.getCreditProjects()
     }
 
     val scrollState = rememberScrollState()
@@ -1078,13 +1227,13 @@ fun AcknowledgementsScreen(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = "开源鸣谢",
+                    text = strings.creditsTitle,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = TmTextPrimary
                 )
                 Text(
-                    text = "Token Monitor Android 的诞生离不开开源社区的智慧与贡献。衷心感谢以下所有开源项目、工具与灵感来源：",
+                    text = strings.creditsIntro,
                     fontSize = 12.sp,
                     color = TmTextSecondary,
                     lineHeight = 18.sp
@@ -1116,11 +1265,11 @@ fun AcknowledgementsScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 item.tags.forEach { tag ->
-                                    val isOurs = tag == "本项目"
-                                    val isDep = tag == "第三方依赖"
-                                    val isFont = tag == "内置字体"
-                                    val isUpstream = tag == "上游原型"
-                                    val isRef = tag == "技术参考"
+                                    val isOurs = tag == "本项目" || tag == "This Project"
+                                    val isDep = tag == "第三方依赖" || tag == "Dependency"
+                                    val isFont = tag == "内置字体" || tag == "Bundled Font"
+                                    val isUpstream = tag == "上游原型" || tag == "Upstream Model"
+                                    val isRef = tag == "技术参考" || tag == "Reference"
                                     val isLicense = tag.contains("MIT") || tag.contains("OFL") || tag.contains("Apache") || tag.contains("GPL")
 
                                     val bg = when {
@@ -1176,17 +1325,17 @@ fun AcknowledgementsScreen(
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(if (isLight) Color(0xFFF8FAFC) else Color(0x14000000))
                                 .border(0.5.dp, if (isLight) Color(0xFFE2E8F0) else Color(0x18FFFFFF), RoundedCornerShape(6.dp))
-                                .clickable {
-                                    try {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(item.url)).apply {
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        }
-                                        context.startActivity(intent)
-                                    } catch (e: Throwable) {
-                                        Toast.makeText(context, "无法打开浏览器: ${e.message}", Toast.LENGTH_SHORT).show()
+                            .clickable {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(item.url)).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                     }
+                                    context.startActivity(intent)
+                                } catch (e: Throwable) {
+                                    Toast.makeText(context, "${strings.toastCannotOpenSettings("")}: ${e.message}", Toast.LENGTH_SHORT).show()
                                 }
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -1199,7 +1348,7 @@ fun AcknowledgementsScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = "访问仓库 ↗",
+                                text = strings.creditsOpenRepo,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = TmPrimary
@@ -1266,7 +1415,7 @@ fun AcknowledgementsScreen(
                                 color = TmPrimary
                             )
                             Text(
-                                text = "设置",
+                                text = strings.settingsTitle,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = TmPrimary
@@ -1274,7 +1423,7 @@ fun AcknowledgementsScreen(
                         }
 
                         Text(
-                            text = "共 ${projects.size} 个开源项目",
+                            text = strings.creditsTotalProjects(projects.size),
                             fontSize = 11.sp,
                             color = TmTextMuted
                         )
@@ -1284,3 +1433,707 @@ fun AcknowledgementsScreen(
         }
     }
 }
+
+@Composable
+fun ConnectProvidersScreen(
+    directProviders: List<DirectProviderConfig>,
+    onBack: () -> Unit,
+    onSelectProvider: (String) -> Unit,
+    onToggleEnable: (DirectProviderConfig, Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    BackHandler { onBack() }
+    val strings = LocalAppStrings.current
+    val isThemeLight = LocalThemeMode.current == AppThemeMode.LIGHT
+
+    val scrollState = rememberScrollState()
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isWideScreen = isLandscape || configuration.screenWidthDp >= 600
+
+    val supportsOpticalGlass = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    val ambientBackdrop = LocalLiquidGlassBackdrop.current
+    val ambientState: Backdrop = ambientBackdrop ?: emptyBackdrop()
+    val headerBackdrop = if (supportsOpticalGlass) rememberLayerBackdrop() else null
+    val combinedHeaderBackdrop = if (supportsOpticalGlass && headerBackdrop != null) {
+        rememberCombinedBackdrop(ambientState, headerBackdrop)
+    } else {
+        ambientState
+    }
+    val headerCaptureModifier = headerBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier
+
+    val density = LocalDensity.current
+    val headerScrollThresholdPx = with(density) { 56.dp.toPx() }.coerceAtLeast(1f)
+    val headerBlurProgress = (scrollState.value / headerScrollThresholdPx).coerceIn(0f, 1f)
+
+    val topContentPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val navHeaderHeight = topContentPadding + 48.dp
+
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        // 1. Scrollable Content Layer (captured by headerBackdrop)
+        Column(
+            modifier = Modifier
+                .then(if (isWideScreen) Modifier.widthIn(max = 760.dp) else Modifier.fillMaxWidth())
+                .padding(horizontal = 14.dp)
+                .then(headerCaptureModifier)
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Spacer(Modifier.height(navHeaderHeight + 8.dp))
+
+            // Title Block
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = strings.directProvidersTitle,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TmTextPrimary
+                )
+                Text(
+                    text = strings.directProvidersSummary(directProviders.count { it.enabled }, directProviders.size),
+                    fontSize = 12.sp,
+                    color = TmTextSecondary,
+                    lineHeight = 18.sp
+                )
+            }
+
+            // Providers list card
+            TmCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    directProviders.forEach { cfg ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isThemeLight) Color(0xFFF8FAFC) else Color(0x12FFFFFF))
+                                .border(
+                                    0.5.dp,
+                                    if (cfg.enabled) TmAccent.copy(alpha = 0.35f)
+                                    else if (isThemeLight) Color(0xFFE2E8F0)
+                                    else Color(0x1FFFFFFF),
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .clickable {
+                                    onSelectProvider(cfg.id)
+                                }
+                                .padding(horizontal = 12.dp, vertical = 11.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                // Official brand logo
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(RoundedCornerShape(9.dp))
+                                        .background(if (isThemeLight) Color(0xFFEFF6FF) else Color(0x18FFFFFF))
+                                        .border(
+                                            0.5.dp,
+                                            if (isThemeLight) Color(0xFFDBEAFE) else Color(0x22FFFFFF),
+                                            RoundedCornerShape(9.dp)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    BrandIcon(name = cfg.id, size = 20.dp)
+                                }
+
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(
+                                        text = cfg.name,
+                                        fontSize = 13.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = TmTextPrimary
+                                    )
+                                    val isCodex = cfg.id == "codex"
+                                    val statusText = when {
+                                        cfg.enabled && cfg.apiKey.isNotBlank() -> if (isCodex) strings.codexLoggedIn else strings.directProviderEnabled
+                                        cfg.apiKey.isNotBlank() -> strings.directProviderStatusConfigured
+                                        else -> strings.directProviderStatusNotConfigured
+                                    }
+                                    val statusColor = when {
+                                        cfg.enabled && cfg.apiKey.isNotBlank() -> Color(0xFF30D158)
+                                        cfg.apiKey.isNotBlank() -> TmTextSecondary
+                                        else -> TmTextMuted
+                                    }
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        if (cfg.enabled && cfg.apiKey.isNotBlank()) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(6.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color(0xFF30D158))
+                                            )
+                                        }
+                                        Text(
+                                            text = statusText,
+                                            fontSize = 11.sp,
+                                            color = statusColor
+                                        )
+                                    }
+                                }
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                androidx.compose.material3.Switch(
+                                    checked = cfg.enabled,
+                                    onCheckedChange = { checked ->
+                                        onToggleEnable(cfg, checked)
+                                    },
+                                    colors = androidx.compose.material3.SwitchDefaults.colors(
+                                        checkedThumbColor = Color.White,
+                                        checkedTrackColor = TmAccent
+                                    )
+                                )
+                                Text(
+                                    text = "›",
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Light,
+                                    color = TmTextMuted
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(135.dp))
+        }
+
+        // 2. ProgressiveBlurHeader pinned at top
+        ProgressiveBlurHeader(
+            backdrop = combinedHeaderBackdrop,
+            progress = headerBlurProgress,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .height(navHeaderHeight),
+            shape = RoundedCornerShape(0.dp),
+            uniformOverlay = true
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 14.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                Column(
+                    modifier = Modifier
+                        .then(if (isWideScreen) Modifier.widthIn(max = 760.dp) else Modifier.fillMaxWidth())
+                        .fillMaxSize()
+                ) {
+                    Spacer(Modifier.height(topContentPadding))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onBack() }
+                                .padding(horizontal = 6.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "‹",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TmPrimary
+                            )
+                            Text(
+                                text = strings.settingsTitle,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TmPrimary
+                            )
+                        }
+
+                        Text(
+                            text = strings.directProvidersTitle,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TmTextPrimary
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ConnectProviderDetailScreen(
+    provider: DirectProviderConfig,
+    testState: ProviderTestState,
+    onBack: () -> Unit,
+    onUpdate: (DirectProviderConfig) -> Unit,
+    onSave: (DirectProviderConfig) -> Unit,
+    onTest: (String, String) -> Unit,
+    onOAuthExchange: ((String, String, (Boolean, String?) -> Unit) -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    BackHandler { onBack() }
+    val context = LocalContext.current
+    val strings = LocalAppStrings.current
+    val isThemeLight = LocalThemeMode.current == AppThemeMode.LIGHT
+
+    val scrollState = rememberScrollState()
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isWideScreen = isLandscape || configuration.screenWidthDp >= 600
+
+    val supportsOpticalGlass = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    val ambientBackdrop = LocalLiquidGlassBackdrop.current
+    val ambientState: Backdrop = ambientBackdrop ?: emptyBackdrop()
+    val headerBackdrop = if (supportsOpticalGlass) rememberLayerBackdrop() else null
+    val combinedHeaderBackdrop = if (supportsOpticalGlass && headerBackdrop != null) {
+        rememberCombinedBackdrop(ambientState, headerBackdrop)
+    } else {
+        ambientState
+    }
+    val headerCaptureModifier = headerBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier
+
+    val density = LocalDensity.current
+    val headerScrollThresholdPx = with(density) { 56.dp.toPx() }.coerceAtLeast(1f)
+    val headerBlurProgress = (scrollState.value / headerScrollThresholdPx).coerceIn(0f, 1f)
+
+    val topContentPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val navHeaderHeight = topContentPadding + 48.dp
+
+    var apiKey by remember(provider.apiKey) { mutableStateOf(provider.apiKey) }
+    var enabled by remember(provider.enabled) { mutableStateOf(provider.enabled) }
+    var keyVisible by remember { mutableStateOf(false) }
+
+    var showOAuthDialog by remember { mutableStateOf(false) }
+    var isExchangingOAuth by remember { mutableStateOf(false) }
+
+    if (showOAuthDialog) {
+        CodexOAuthDialog(
+            isExchanging = isExchangingOAuth,
+            onDismiss = { showOAuthDialog = false },
+            onSuccess = { code, verifier ->
+                isExchangingOAuth = true
+                onOAuthExchange?.invoke(code, verifier) { success, err ->
+                    isExchangingOAuth = false
+                    if (success) {
+                        showOAuthDialog = false
+                        Toast.makeText(context, strings.codexLoginSuccess, Toast.LENGTH_SHORT).show()
+                    } else {
+                        val msg = err ?: strings.codexLoginFailed(err.orEmpty())
+                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                    }
+                }
+            },
+            onError = { err ->
+                isExchangingOAuth = false
+                Toast.makeText(context, strings.codexLoginFailed(err), Toast.LENGTH_LONG).show()
+            }
+        )
+    }
+
+    val textFieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = TmPrimary,
+        unfocusedBorderColor = if (isThemeLight) Color(0xFFCBD5E1) else Color(0x33FFFFFF),
+        focusedTextColor = TmTextPrimary,
+        unfocusedTextColor = TmTextPrimary,
+        focusedLabelColor = TmPrimary,
+        unfocusedLabelColor = TmTextSecondary,
+        cursorColor = TmPrimary
+    )
+
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        // 1. Scrollable Content Layer (captured by headerBackdrop)
+        Column(
+            modifier = Modifier
+                .then(if (isWideScreen) Modifier.widthIn(max = 760.dp) else Modifier.fillMaxWidth())
+                .padding(horizontal = 14.dp)
+                .then(headerCaptureModifier)
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Spacer(Modifier.height(navHeaderHeight + 8.dp))
+
+            // Hero Brand Identity Card
+            TmCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isThemeLight) Color(0xFFEFF6FF) else Color(0x18FFFFFF))
+                                .border(
+                                    0.5.dp,
+                                    if (isThemeLight) Color(0xFFDBEAFE) else Color(0x22FFFFFF),
+                                    RoundedCornerShape(12.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            BrandIcon(name = provider.id, size = 28.dp)
+                        }
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = provider.name,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TmTextPrimary
+                            )
+                            Text(
+                                text = strings.directProviderHint(provider.id),
+                                fontSize = 12.sp,
+                                color = TmTextSecondary,
+                                lineHeight = 16.sp
+                            )
+                        }
+                    }
+
+                    // Enable Switch Row
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isThemeLight) Color(0xFFF8FAFC) else Color(0x14000000))
+                            .border(
+                                0.5.dp,
+                                if (isThemeLight) Color(0xFFE2E8F0) else Color(0x18FFFFFF),
+                                RoundedCornerShape(10.dp)
+                            )
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = strings.directProviderEnableSwitch,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TmTextPrimary
+                            )
+                            Text(
+                                text = strings.directProviderEnableSwitchDesc,
+                                fontSize = 11.sp,
+                                color = TmTextMuted,
+                                lineHeight = 15.sp
+                            )
+                        }
+
+                        androidx.compose.material3.Switch(
+                            checked = enabled,
+                            onCheckedChange = {
+                                enabled = it
+                                onUpdate(provider.copy(enabled = it, apiKey = apiKey.trim()))
+                            },
+                            colors = androidx.compose.material3.SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = TmAccent
+                            )
+                        )
+                    }
+                }
+            }
+
+            // If Codex, show ChatGPT OAuth Login Card
+            if (provider.id == "codex") {
+                val hasToken = apiKey.isNotBlank()
+                TmCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = strings.codexLoginWithChatGPT,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TmTextMuted,
+                                letterSpacing = 1.2.sp
+                            )
+                            if (hasToken) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF30D158))
+                                    )
+                                    Text(
+                                        text = strings.codexLoggedIn,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color(0xFF30D158)
+                                    )
+                                }
+                            }
+                        }
+
+                        Text(
+                            text = strings.codexLoginPrompt,
+                            fontSize = 12.sp,
+                            color = TmTextSecondary,
+                            lineHeight = 16.sp
+                        )
+
+                        LiquidActionButton(
+                            onClick = { showOAuthDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            tone = if (hasToken) LiquidButtonTone.SECONDARY else LiquidButtonTone.PRIMARY,
+                            contentPadding = PaddingValues(vertical = 10.dp)
+                        ) {
+                            Text(
+                                text = if (hasToken) strings.codexReLogin else strings.codexLoginWithChatGPT,
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+            }
+
+            // API Key & Testing Card
+            val isCodex = provider.id == "codex"
+            TmCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = if (isCodex) strings.codexManualTokenHint else strings.directProviderApiKey,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TmTextMuted,
+                        letterSpacing = 1.2.sp
+                    )
+
+                    OutlinedTextField(
+                        value = apiKey,
+                        onValueChange = {
+                            apiKey = it
+                            val trimmed = it.trim()
+                            if (isCodex && trimmed.startsWith("{") && trimmed.endsWith("}")) {
+                                try {
+                                    val obj = org.json.JSONObject(trimmed)
+                                    val acc = obj.optString("access_token", trimmed)
+                                    val ref = obj.optString("refresh_token")
+                                    val updatedExtra = if (ref.isNotBlank()) provider.extra + ("refreshToken" to ref) else provider.extra
+                                    onUpdate(provider.copy(apiKey = acc, extra = updatedExtra, enabled = enabled))
+                                } catch (_: Exception) {
+                                    onUpdate(provider.copy(apiKey = trimmed, enabled = enabled))
+                                }
+                            } else {
+                                onUpdate(provider.copy(apiKey = trimmed, enabled = enabled))
+                            }
+                        },
+                        label = { Text(if (isCodex) "Access Token" else strings.directProviderApiKey) },
+                        placeholder = { Text(if (isCodex) "Bearer Token / auth.json" else strings.directProviderApiKeyPlaceholder) },
+                        visualTransformation = if (keyVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            Text(
+                                text = if (keyVisible) strings.hideText else strings.showText,
+                                modifier = Modifier
+                                    .clickable { keyVisible = !keyVisible }
+                                    .padding(8.dp),
+                                color = TmAccent,
+                                fontSize = 12.sp
+                            )
+                        },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = textFieldColors
+                    )
+
+                    // Test Connection Button
+                    LiquidActionButton(
+                        onClick = {
+                            onTest(provider.id, apiKey.trim())
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        tone = LiquidButtonTone.SECONDARY,
+                        loading = testState.isTesting,
+                        contentPadding = PaddingValues(vertical = 9.dp)
+                    ) {
+                        Text(
+                            text = if (testState.isTesting) strings.directProviderTesting else strings.directProviderTest,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.White
+                        )
+                    }
+
+                    // Test Result Banner
+                    if (testState.success != null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    if (testState.success == true) Color(0x1F30D158) else Color(0x1FFF453A)
+                                )
+                                .border(
+                                    1.dp,
+                                    if (testState.success == true) Color(0x4D30D158) else Color(0x4DFF453A),
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .padding(12.dp)
+                        ) {
+                            val msgTextColor = when {
+                                testState.success == true -> if (isThemeLight) Color(0xFF065F46) else Color(0xFFD1FAE5)
+                                else -> if (isThemeLight) Color(0xFF991B1B) else Color(0xFFFFD8D8)
+                            }
+                            Text(
+                                text = if (testState.success == true) {
+                                    strings.directProviderTestSuccess(testState.message)
+                                } else {
+                                    strings.directProviderTestFailed(testState.message)
+                                },
+                                fontSize = 12.sp,
+                                color = msgTextColor,
+                                lineHeight = 18.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Save Button
+                    LiquidActionButton(
+                        onClick = {
+                            val updated = provider.copy(apiKey = apiKey.trim(), enabled = enabled)
+                            onSave(updated)
+                            Toast.makeText(context, strings.directProviderSaved, Toast.LENGTH_SHORT).show()
+                            onBack()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        tone = LiquidButtonTone.PRIMARY,
+                        contentPadding = PaddingValues(vertical = 10.dp)
+                    ) {
+                        Text(
+                            text = strings.directProviderSave,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(135.dp))
+        }
+
+        // 2. ProgressiveBlurHeader pinned at top
+        ProgressiveBlurHeader(
+            backdrop = combinedHeaderBackdrop,
+            progress = headerBlurProgress,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .height(navHeaderHeight),
+            shape = RoundedCornerShape(0.dp),
+            uniformOverlay = true
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 14.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                Column(
+                    modifier = Modifier
+                        .then(if (isWideScreen) Modifier.widthIn(max = 760.dp) else Modifier.fillMaxWidth())
+                        .fillMaxSize()
+                ) {
+                    Spacer(Modifier.height(topContentPadding))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onBack() }
+                                .padding(horizontal = 6.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "‹",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TmPrimary
+                            )
+                            Text(
+                                text = strings.directProviderBack,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TmPrimary
+                            )
+                        }
+
+                        Text(
+                            text = provider.name,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TmTextPrimary
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+

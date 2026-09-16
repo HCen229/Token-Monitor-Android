@@ -45,7 +45,10 @@ data class ProviderLimit(
     val accountLabel: String,
     val windows: List<WindowLimit>,
     val balanceAmount: Double?,
-    val balanceCurrency: String?
+    val balanceCurrency: String?,
+    val resetCreditsCount: Int? = null,
+    val resetCreditsExpiry: String? = null,
+    val resetCreditsDescription: String? = null
 )
 
 data class DailyHistory(
@@ -116,6 +119,20 @@ enum class RingCenterTextConfig(val id: String, val label: String) {
     companion object {
         fun fromId(id: String?): RingCenterTextConfig {
             return entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: SESSION_5H
+        }
+    }
+}
+
+enum class AppLanguage(val id: String, val displayNameZh: String, val displayNameEn: String) {
+    SYSTEM("system", "跟随系统", "System Default"),
+    ZH("zh", "简体中文", "Simplified Chinese"),
+    EN("en", "English", "English");
+
+    fun getDisplayName(isEnglish: Boolean): String = if (isEnglish) displayNameEn else displayNameZh
+
+    companion object {
+        fun fromId(id: String?): AppLanguage {
+            return entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: SYSTEM
         }
     }
 }

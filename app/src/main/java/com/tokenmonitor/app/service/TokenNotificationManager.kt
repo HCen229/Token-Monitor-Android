@@ -28,6 +28,7 @@ import com.tokenmonitor.app.data.IslandConfig
 import com.tokenmonitor.app.data.IslandItemType
 import com.tokenmonitor.app.data.TokenRepository
 import com.tokenmonitor.app.data.TokenStats
+import com.tokenmonitor.app.ui.i18n.getAppStrings
 import org.json.JSONObject
 import java.text.NumberFormat
 import java.util.Locale
@@ -37,7 +38,12 @@ object TokenNotificationManager {
     // Stable channel IDs
     const val CHANNEL_ID_FOCUS = "token_monitor_live_channel"
     const val CHANNEL_ID_SERVICE = "token_monitor_service_channel"
+    const val CHANNEL_ID_QUOTA_ALERT = "token_monitor_quota_alert"
     const val NOTIFICATION_ID = 10086
+    private const val ALERT_NOTIFICATION_BASE_ID = 20000
+
+    private val alertedQuotaConditions = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val QUOTA_ALERT_COOLDOWN_MS = 2 * 3600 * 1000L // 2 hours cooldown
 
     private const val WORKING_THRESHOLD_MS = 120_000L // 2 minutes (120 seconds)
 
@@ -122,13 +128,14 @@ object TokenNotificationManager {
                     try { nm.deleteNotificationChannelGroup("token_monitor_group") } catch (_: Throwable) {}
                 }
 
+                val strings = getAppStrings(context)
                 // 1. Primary Live Notification Channel (AOSP standard + Xiaomi Island compatible)
                 val focusChannel = NotificationChannel(
                     CHANNEL_ID_FOCUS,
-                    "Token 实时监控 (状态栏与实时通知)",
+                    if (strings.isEnglish) "Token Live Monitor (Status Bar & Notification)" else "Token 实时监控 (状态栏与实时通知)",
                     NotificationManager.IMPORTANCE_HIGH
                 ).apply {
-                    description = "实时在手机状态栏、通知中心与灵动岛/胶囊展示 Token 用量与工作状态"
+                    description = if (strings.isEnglish) "Real-time Token usage and status in status bar, notification center, and Dynamic Island" else "实时在手机状态栏、通知中心与灵动岛/胶囊展示 Token 用量与工作状态"
                     setShowBadge(true)
                     lockscreenVisibility = Notification.VISIBILITY_PUBLIC
                     enableVibration(false)
@@ -142,10 +149,10 @@ object TokenNotificationManager {
                 if (existingService == null) {
                     val serviceChannel = NotificationChannel(
                         CHANNEL_ID_SERVICE,
-                        "Token 后台同步服务",
+                        if (strings.isEnglish) "Token Background Sync Service" else "Token 后台同步服务",
                         NotificationManager.IMPORTANCE_LOW
                     ).apply {
-                        description = "保持后台实时数据同步与 Hub 稳定连接"
+                        description = if (strings.isEnglish) "Keeps background real-time data sync and stable Hub connection" else "保持后台实时数据同步与 Hub 稳定连接"
                         setShowBadge(false)
                         lockscreenVisibility = Notification.VISIBILITY_SECRET
                         enableVibration(false)
@@ -153,6 +160,23 @@ object TokenNotificationManager {
                         setSound(null, null)
                     }
                     nm.createNotificationChannel(serviceChannel)
+                }
+
+                // 3. Quota & Low Balance Alert Channel (IMPORTANCE_HIGH)
+                val existingAlert = nm.getNotificationChannel(CHANNEL_ID_QUOTA_ALERT)
+                if (existingAlert == null) {
+                    val alertChannel = NotificationChannel(
+                        CHANNEL_ID_QUOTA_ALERT,
+                        if (strings.isEnglish) "Quota & Balance Alerts" else "配额与余额预警",
+                        NotificationManager.IMPORTANCE_HIGH
+                    ).apply {
+                        description = if (strings.isEnglish) "Alerts when quota is below 20% or balance is below 2.00 CNY" else "当供应商剩余配额不足 20% 或余额不足 2.00 CNY 时发出系统预警通知"
+                        setShowBadge(true)
+                        lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                        enableVibration(true)
+                        enableLights(true)
+                    }
+                    nm.createNotificationChannel(alertChannel)
                 }
             }
         } catch (e: Throwable) {
@@ -225,6 +249,9 @@ object TokenNotificationManager {
                     lastTokenIncreaseTime = System.currentTimeMillis()
                 }
                 lastTotalTokens = currentTokens
+
+                // Check and post system quota & low-balance alerts
+                checkAndPostQuotaAlerts(context, stats)
             }
 
             if (isMonitoringActive) {
@@ -233,6 +260,115 @@ object TokenNotificationManager {
         } catch (e: Throwable) {
             android.util.Log.e("TokenNotification", "updateStats failed", e)
         }
+    }
+
+    fun checkAndPostQuotaAlerts(context: Context, stats: TokenStats) {
+        if (!isPermissionGranted(context) || !areNotificationsEnabled(context)) return
+        ensureChannels(context)
+
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+        val strings = getAppStrings(context)
+        val now = System.currentTimeMillis()
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        for (provider in stats.providers) {
+            val providerName = provider.provider.replaceFirstChar { it.uppercase() }
+            val providerKey = provider.provider.lowercase().trim()
+
+            // 1. Check window quota limits (remaining <= 20%)
+            for (win in provider.windows) {
+                if (!win.showMeter || win.kind.equals("billing", ignoreCase = true)) continue
+                val percent = win.remainingPercent
+                val alertKey = "${providerKey}_window_${win.kind.lowercase()}"
+                if (percent in 0.0..20.0) {
+                    val lastAlerted = alertedQuotaConditions[alertKey] ?: 0L
+                    if (now - lastAlerted > QUOTA_ALERT_COOLDOWN_MS) {
+                        alertedQuotaConditions[alertKey] = now
+                        val winLabel = win.label.ifBlank { win.kind }
+                        val title = strings.quotaAlertTitle(providerName)
+                        val body = strings.quotaAlertWindowBody(providerName, winLabel, percent.toInt())
+                        postSystemAlert(context, nm, alertKey.hashCode(), title, body, pendingIntent)
+                    }
+                } else if (percent > 25.0) {
+                    alertedQuotaConditions.remove(alertKey)
+                }
+            }
+
+            // 2. Check pay-as-you-go balance (balance <= 2.00 CNY, or <= $0.30 USD)
+            if (provider.balanceAmount != null) {
+                val amount = provider.balanceAmount
+                val curr = provider.balanceCurrency.orEmpty().uppercase()
+                val isLowBalance = when (curr) {
+                    "USD" -> amount <= 0.30
+                    else -> amount <= 2.00
+                }
+
+                val alertKey = "${providerKey}_balance"
+                if (isLowBalance) {
+                    val lastAlerted = alertedQuotaConditions[alertKey] ?: 0L
+                    if (now - lastAlerted > QUOTA_ALERT_COOLDOWN_MS) {
+                        alertedQuotaConditions[alertKey] = now
+                        val formattedAmount = String.format(Locale.US, "%.2f", amount)
+                        val title = strings.quotaAlertTitle(providerName)
+                        val body = strings.quotaAlertBalanceBody(providerName, formattedAmount, provider.balanceCurrency ?: "CNY")
+                        postSystemAlert(context, nm, alertKey.hashCode(), title, body, pendingIntent)
+                    }
+                } else {
+                    val isRecovered = when (curr) {
+                        "USD" -> amount > 0.40
+                        else -> amount > 2.50
+                    }
+                    if (isRecovered) {
+                        alertedQuotaConditions.remove(alertKey)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun postSystemAlert(
+        context: Context,
+        nm: NotificationManager,
+        hashKey: Int,
+        title: String,
+        body: String,
+        pendingIntent: PendingIntent
+    ) {
+        val notifId = ALERT_NOTIFICATION_BASE_ID + Math.abs(hashKey % 5000)
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(context, CHANNEL_ID_QUOTA_ALERT)
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(context)
+        }
+
+        builder
+            .setSmallIcon(R.drawable.ic_stat_token_monitor)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setOnlyAlertOnce(false)
+            .setShowWhen(true)
+            .setWhen(System.currentTimeMillis())
+            .setCategory(Notification.CATEGORY_ALARM)
+            .setColor(0xFFFF9F0A.toInt())
+            .setStyle(Notification.BigTextStyle().bigText(body))
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            builder.setVisibility(Notification.VISIBILITY_PUBLIC)
+        }
+
+        nm.notify(notifId, builder.build())
     }
 
     fun postNotification(context: Context, force: Boolean = false) {
@@ -263,18 +399,20 @@ object TokenNotificationManager {
 
     fun postTestNotification(context: Context) {
         ensureChannels(context)
+        val strings = getAppStrings(context)
         lastTokenIncreaseTime = System.currentTimeMillis() // simulate active working
         try {
             startMonitoring(context)
             postNotification(context, force = true)
-            Toast.makeText(context, "已激活实时监控与通知！请上划回到桌面或查看状态栏", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, strings.toastLiveNotificationSent, Toast.LENGTH_LONG).show()
         } catch (e: Throwable) {
-            Toast.makeText(context, "启动失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, strings.toastSendFailed(e.message ?: ""), Toast.LENGTH_SHORT).show()
         }
     }
 
     fun openNotificationSettings(context: Context) {
         ensureChannels(context)
+        val strings = getAppStrings(context)
         try {
             val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
@@ -295,7 +433,7 @@ object TokenNotificationManager {
                 }
                 context.startActivity(fallback)
             } catch (e: Throwable) {
-                Toast.makeText(context, "无法打开系统设置: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, strings.toastCannotOpenSettings(e.message ?: ""), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -319,19 +457,20 @@ object TokenNotificationManager {
         val fullTokensFormatted = NumberFormat.getNumberInstance(Locale.US).format(todayTokens)
         val costFormatted = String.format(Locale.US, "$%.2f", todayCost)
 
+        val strings = getAppStrings(context)
         val statusWord = when {
-            !isConnected -> "离线"
-            isWorking -> "工作中"
-            else -> "空闲中"
+            !isConnected -> strings.statusOffline
+            isWorking -> strings.statusActive
+            else -> strings.statusIdle
         }
 
         val statusDot = ""
 
         val statusTitle = "Token Monitor · $statusWord"
         val statusText = if (isConnected) {
-            "今日用量: $compactTokens ($fullTokensFormatted) · $costFormatted"
+            "${strings.notifToday}: $compactTokens ($fullTokensFormatted) · $costFormatted"
         } else {
-            "正在等待与电脑端 Hub 建立连接..."
+            strings.notifWaitingHub
         }
 
         // Left slot is locked to working status (IslandItemType.STATUS)
@@ -446,23 +585,23 @@ object TokenNotificationManager {
         }
 
         val statusIndicator = when {
-            !isConnected -> "⚠️ 离线"
-            isWorking -> "🟢 工作中"
-            else -> "💤 空闲中"
+            !isConnected -> "⚠️ ${strings.statusOffline}"
+            isWorking -> "🟢 ${strings.statusActive}"
+            else -> "💤 ${strings.statusIdle}"
         }
 
         val quotaVal = resolveAiQuotaValue(stats, config.selectedProvider, config.quotaMode)
 
         // Build concise, structured BigText for AOSP notification card
         val expandedBigText = buildString {
-            append("• 运行状态: $statusIndicator\n")
-            append("• 今日用量: $compactTokens ($fullTokensFormatted) · 费用: $costFormatted")
+            append("• ${strings.leftSlotName}: $statusIndicator\n")
+            append("• ${strings.notifToday}: $compactTokens ($fullTokensFormatted) · ${strings.notifCost}: $costFormatted")
             val monthTokens = stats?.month?.totalTokens ?: 0L
             val monthCost = stats?.month?.costUsd ?: 0.0
             if (monthTokens > 0L || monthCost > 0.0) {
                 val compactMonth = formatCompactTokens(monthTokens)
                 val monthCostFormatted = String.format(Locale.US, "$%.2f", monthCost)
-                append("\n• 本月累计: $compactMonth · 费用: $monthCostFormatted")
+                append("\n• ${strings.notifMonthTotal}: $compactMonth · ${strings.notifCost}: $monthCostFormatted")
             }
         }
 
@@ -820,6 +959,7 @@ object TokenNotificationManager {
             lower.contains("trae") -> R.drawable.ic_brand_trae
             lower.contains("opencode") -> R.drawable.ic_brand_opencode
             lower.contains("workbuddy") -> R.drawable.ic_brand_workbuddy
+            lower.contains("glm") || lower.contains("zhipu") || lower.contains("zai") || lower.contains("bigmodel") -> R.drawable.ic_brand_glm
             else -> R.drawable.ic_brand_token_monitor
         }
     }
@@ -846,8 +986,9 @@ object TokenNotificationManager {
         isConnected: Boolean,
         isWorking: Boolean
     ): Icon {
+        val strings = getAppStrings(context)
         val cleanText = text?.replace("🟢", "")?.replace("💤", "")?.replace("⚠️", "")?.trim().orEmpty()
-            .ifEmpty { if (!isConnected) "离线" else if (isWorking) "工作中" else "空闲中" }
+            .ifEmpty { if (!isConnected) strings.statusOffline else if (isWorking) strings.statusActive else strings.statusIdle }
 
         val cacheKey = "coloros|$cleanText|$isConnected|$isWorking"
         val cached = cachedCapsuleIcon

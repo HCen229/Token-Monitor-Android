@@ -8,6 +8,7 @@ import com.tokenmonitor.app.data.DiagnosticResult
 import com.tokenmonitor.app.data.QuotaDisplayStyle
 import com.tokenmonitor.app.data.TokenRepository
 import com.tokenmonitor.app.data.TokenStats
+import com.tokenmonitor.app.data.provider.DirectProviderConfig
 import com.tokenmonitor.app.service.TokenNotificationManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -23,6 +24,12 @@ enum class AppTab(val title: String) {
     SETTINGS("设置")
 }
 
+data class ProviderTestState(
+    val isTesting: Boolean = false,
+    val success: Boolean? = null,
+    val message: String = ""
+)
+
 sealed class UiState {
     data object Loading : UiState()
     data class Success(val stats: TokenStats) : UiState()
@@ -35,7 +42,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var lastValidStats: TokenStats? = repository.getCachedStats()
 
     private val _uiState = MutableStateFlow<UiState>(
-        lastValidStats?.let { UiState.Error(message = "正在连接电脑端...", lastStats = it) } ?: UiState.Loading
+        lastValidStats?.let {
+            val isEn = com.tokenmonitor.app.ui.i18n.getAppStrings(application).isEnglish
+            val msg = if (isEn) "Connecting to computer..." else "正在连接电脑端..."
+            UiState.Error(message = msg, lastStats = it)
+        } ?: UiState.Loading
     )
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
@@ -69,8 +80,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _ringCenterTextConfig = MutableStateFlow(repository.getRingCenterTextConfig())
     val ringCenterTextConfig: StateFlow<RingCenterTextConfig> = _ringCenterTextConfig.asStateFlow()
 
+    private val _language = MutableStateFlow(repository.getLanguage())
+    val language: StateFlow<com.tokenmonitor.app.data.AppLanguage> = _language.asStateFlow()
+
     private val _diagnosticState = MutableStateFlow(DiagnosticResult())
     val diagnosticState: StateFlow<DiagnosticResult> = _diagnosticState.asStateFlow()
+
+    private val _directProviders = MutableStateFlow(repository.getDirectProviderConfigs())
+    val directProviders: StateFlow<List<DirectProviderConfig>> = _directProviders.asStateFlow()
+
+    private val _providerTestStates = MutableStateFlow<Map<String, ProviderTestState>>(emptyMap())
+    val providerTestStates: StateFlow<Map<String, ProviderTestState>> = _providerTestStates.asStateFlow()
 
     private var pollJob: Job? = null
 
@@ -93,9 +113,70 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _selectedPeriod.value = period
     }
 
-
     fun selectTab(tab: AppTab) {
         _currentTab.value = tab
+    }
+
+    fun updateDirectProvider(config: DirectProviderConfig) {
+        val current = _directProviders.value.toMutableList()
+        val idx = current.indexOfFirst { it.id == config.id }
+        if (idx >= 0) {
+            current[idx] = config
+        } else {
+            current.add(config)
+        }
+        _directProviders.value = current
+    }
+
+    fun saveDirectProviders(configs: List<DirectProviderConfig>) {
+        _directProviders.value = configs
+        repository.saveDirectProviderConfigs(configs)
+        viewModelScope.launch {
+            fetchData(isSilent = true, forceDirectRefresh = true)
+        }
+    }
+
+    fun testDirectProvider(id: String, apiKey: String) {
+        viewModelScope.launch {
+            val currentMap = _providerTestStates.value.toMutableMap()
+            currentMap[id] = ProviderTestState(isTesting = true)
+            _providerTestStates.value = currentMap
+
+            val res = repository.testDirectProvider(id, apiKey)
+            val updatedMap = _providerTestStates.value.toMutableMap()
+            if (res.isSuccess) {
+                updatedMap[id] = ProviderTestState(
+                    isTesting = false,
+                    success = true,
+                    message = res.getOrDefault("连通成功")
+                )
+                fetchData(isSilent = true, forceDirectRefresh = true)
+            } else {
+                val err = res.exceptionOrNull()?.message ?: "连接失败"
+                updatedMap[id] = ProviderTestState(
+                    isTesting = false,
+                    success = false,
+                    message = err
+                )
+            }
+            _providerTestStates.value = updatedMap
+        }
+    }
+
+    fun exchangeCodexOAuth(code: String, verifier: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            val res = repository.exchangeCodexOAuth(code, verifier)
+            if (res.isSuccess) {
+                val updated = res.getOrThrow()
+                updateDirectProvider(updated)
+                saveDirectProviders(_directProviders.value)
+                fetchData(isSilent = true, forceDirectRefresh = true)
+                onResult(true, null)
+            } else {
+                val err = res.exceptionOrNull()?.message ?: "授权换取失败"
+                onResult(false, err)
+            }
+        }
     }
 
     fun startPolling() {
@@ -124,7 +205,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun manualRefresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            fetchData(isSilent = false)
+            fetchData(isSilent = false, forceDirectRefresh = true)
             _isRefreshing.value = false
         }
     }
@@ -139,26 +220,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val isConnected: Boolean
         get() = _uiState.value is UiState.Success
 
-    private suspend fun fetchData(isSilent: Boolean) {
+    private suspend fun fetchData(isSilent: Boolean, forceDirectRefresh: Boolean = false) {
         if (!isSilent && _uiState.value !is UiState.Success && lastValidStats == null) {
             _uiState.value = UiState.Loading
         }
 
-        val result = repository.fetchStats()
+        val result = repository.fetchStats(forceDirectRefresh = forceDirectRefresh)
         result.onSuccess { stats ->
             lastValidStats = stats
             _uiState.value = UiState.Success(stats)
             TokenNotificationManager.updateStats(getApplication(), stats, isConnected = true)
         }.onFailure { err ->
-            val statsToKeep = lastValidStats
+            val cachedFresh = repository.getCachedStats()
+            val statsToKeep = cachedFresh
+                ?: lastValidStats
                 ?: (_uiState.value as? UiState.Success)?.stats
                 ?: (_uiState.value as? UiState.Error)?.lastStats
-                ?: repository.getCachedStats()
             if (statsToKeep != null) {
                 lastValidStats = statsToKeep
             }
+            val isEn = com.tokenmonitor.app.ui.i18n.getAppStrings(getApplication()).isEnglish
+            val fallbackErr = if (isEn) "Not connected to Token Monitor" else "未连接电脑端 Token Monitor"
             _uiState.value = UiState.Error(
-                message = err.message ?: "未连接电脑端 Token Monitor",
+                message = err.message ?: fallbackErr,
                 lastStats = statsToKeep
             )
             TokenNotificationManager.updateStats(getApplication(), statsToKeep, isConnected = false)
@@ -237,9 +321,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.saveRingCenterTextConfig(config)
     }
 
+    fun updateLanguage(language: com.tokenmonitor.app.data.AppLanguage) {
+        _language.value = language
+        repository.saveLanguage(language)
+    }
+
     fun testConnection(host: String, port: Int, secret: String) {
         viewModelScope.launch {
-            _diagnosticState.value = DiagnosticResult(isTesting = true, message = "正在进行 TCP 握手与 HTTP 鉴权测试...")
+            val isEn = com.tokenmonitor.app.ui.i18n.getAppStrings(getApplication()).isEnglish
+            val testingMsg = if (isEn) "Testing TCP handshake and HTTP authentication..." else "正在进行 TCP 握手与 HTTP 鉴权测试..."
+            _diagnosticState.value = DiagnosticResult(isTesting = true, message = testingMsg)
             val res = repository.runDiagnostics(host, port, secret)
             _diagnosticState.value = res
         }
@@ -290,7 +381,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 },
                 onFailure = { err ->
                     if (!silent) {
-                        _updateState.value = com.tokenmonitor.app.update.UpdateUiState.Error(err.message ?: "检查更新失败")
+                        val fallback = if (repository.isEnglish()) "Check update failed" else "检查更新失败"
+                        _updateState.value = com.tokenmonitor.app.update.UpdateUiState.Error(err.message ?: fallback)
                     }
                 }
             )
@@ -317,7 +409,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     tryInstallPending()
                 },
                 onFailure = { err ->
-                    _updateState.value = com.tokenmonitor.app.update.UpdateUiState.Error(err.message ?: "下载更新失败")
+                    val fallback = if (repository.isEnglish()) "Download update failed" else "下载更新失败"
+                    _updateState.value = com.tokenmonitor.app.update.UpdateUiState.Error(err.message ?: fallback)
                 }
             )
         }

@@ -66,6 +66,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+            val language by viewModel.language.collectAsStateWithLifecycle()
+            val appStrings = com.tokenmonitor.app.ui.i18n.rememberAppStrings(language)
             val insetsController = remember(window) {
                 WindowCompat.getInsetsController(window, window.decorView)
             }
@@ -88,8 +90,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            TokenMonitorTheme(themeMode = themeMode) {
-                HomeScreen(viewModel = viewModel)
+            androidx.compose.runtime.CompositionLocalProvider(
+                com.tokenmonitor.app.ui.i18n.LocalAppStrings provides appStrings
+            ) {
+                TokenMonitorTheme(themeMode = themeMode) {
+                    HomeScreen(viewModel = viewModel)
+                }
             }
         }
     }

@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tokenmonitor.app.data.DailyHistory
@@ -143,11 +144,12 @@ fun ActivityHeatmapCard(
 
     var selectedCell by remember { mutableStateOf<HeatCell?>(null) }
 
+    val strings = com.tokenmonitor.app.ui.i18n.LocalAppStrings.current
+
     // Build rolling weeks grid (last 28 weeks ~ 6.5 months)
-    val gridData = remember(daily) {
+    val gridData = remember(daily, strings) {
         val cal = Calendar.getInstance()
         val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val monthFmt = SimpleDateFormat("M月", Locale.CHINESE)
 
         // Find Sunday of 51 weeks ago (52 weeks total ~ 1 full year)
         val weeks = 52
@@ -165,7 +167,7 @@ fun ActivityHeatmapCard(
                 val dateStr = sdf.format(cal.time)
                 val dayOfMonth = cal.get(Calendar.DAY_OF_MONTH)
                 if (dayOfMonth == 1) {
-                    monthLabelForCol = monthFmt.format(cal.time)
+                    monthLabelForCol = strings.formatMonthForActivity(dateStr)
                 }
 
                 val item = dailyMap[dateStr]
@@ -196,14 +198,14 @@ fun ActivityHeatmapCard(
     }
 
     TmCard(modifier = modifier) {
-        // Header: "活动" (left), "长按拖动查探用量 · 活跃 55 天 📈" (right)
+        // Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "活动",
+                text = strings.activity,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = TmTextPrimary
@@ -211,12 +213,18 @@ fun ActivityHeatmapCard(
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .padding(start = 8.dp)
             ) {
                 Text(
-                    text = "长按查看当日用量",
+                    text = strings.activityHint,
                     fontSize = 11.sp,
-                    color = TmTextMuted
+                    color = TmTextMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
                 Text(
                     text = "·",
@@ -224,10 +232,12 @@ fun ActivityHeatmapCard(
                     color = TmTextMuted
                 )
                 Text(
-                    text = "活跃 $displayActiveDays 天",
+                    text = strings.activeDays(displayActiveDays),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = TmTextSecondary
+                    color = TmTextSecondary,
+                    maxLines = 1,
+                    softWrap = false
                 )
             }
         }
@@ -256,7 +266,7 @@ fun ActivityHeatmapCard(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            text = formatChineseDate(cell.date),
+                            text = strings.formatDateForActivity(cell.date),
                             fontSize = 11.sp,
                             color = TmTextSecondary,
                             fontWeight = FontWeight.Medium
@@ -266,7 +276,7 @@ fun ActivityHeatmapCard(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = if (cell.tokens > 0) formatCompactTokens(cell.tokens) else "无消耗",
+                                text = if (cell.tokens > 0) formatCompactTokens(cell.tokens) else strings.noUsage,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (cell.tokens > 0) (if (isLight) Color(0xFF007AFF) else Color(0xFF38BDF8)) else TmTextMuted
@@ -412,19 +422,7 @@ private data class HeatCell(val date: String, val tokens: Long, val cost: Double
 private data class MonthLabel(val colIndex: Int, val label: String)
 private data class HeatmapGrid(val columns: List<List<HeatCell>>, val monthLabels: List<MonthLabel>)
 
-/**
- * Format date like "2026-09-08" -> "2026年9月8日 星期二"
- */
-private fun formatChineseDate(dateStr: String): String {
-    return try {
-        val sdfIn = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val date = sdfIn.parse(dateStr.take(10)) ?: return dateStr
-        val sdfOut = SimpleDateFormat("yyyy年M月d日 E", Locale.CHINESE)
-        sdfOut.format(date)
-    } catch (e: Exception) {
-        dateStr
-    }
-}
+
 
 /**
  * Trend Area Spline Chart (Image 3).
@@ -472,22 +470,24 @@ fun TrendSplineChartCard(
         }
     }
 
+    val strings = com.tokenmonitor.app.ui.i18n.LocalAppStrings.current
+
     TmCard(modifier = modifier) {
-        // Header: "趋势" (left), "峰值 399.7M" (right)
+        // Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "趋势",
+                text = strings.trend,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = TmTextPrimary
             )
 
             Text(
-                text = "峰值 ${formatCompactTokens(displayPeak)}",
+                text = strings.peak(formatCompactTokens(displayPeak)),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 color = TmTextSecondary
