@@ -59,6 +59,16 @@
                 android:value="Token Monitor live usage status bar capsule and notifications" />
         </service>
 
+        <!-- Receiver for Xiaomi Super Island expand & click interactions -->
+        <receiver
+            android:name=".service.IslandActionReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.tokenmonitor.app.ACTION_ISLAND_EXPAND" />
+            </intent-filter>
+        </receiver>
+
         <!-- FileProvider for In-App OTA APK Installation -->
         <provider
             android:name="androidx.core.content.FileProvider"

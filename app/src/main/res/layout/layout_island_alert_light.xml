@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 超级岛余量/余额预警弹出布局 - 亮色模式 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/island_alert_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:clickable="true"
+    android:focusable="true"
+    android:paddingStart="15dp"
+    android:paddingEnd="15dp"
+    android:paddingTop="15dp"
+    android:paddingBottom="15dp">
+
+    <!-- 1. 顶栏：Logo + Title/Status + Host IP + 右侧更新时间戳微标 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/iv_alert_logo"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="9dp"
+            android:contentDescription="Token Monitor"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_brand_token_monitor" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_alert_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="#111827"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:includeFontPadding="false"
+                tools:text="Token Monitor Σ · 预警" />
+
+            <TextView
+                android:id="@+id/tv_alert_host_ip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="#4B5563"
+                android:textSize="11sp"
+                android:includeFontPadding="false"
+                tools:text="已连接至 111.111.111.111" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tv_alert_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/bg_badge_timestamp"
+            android:paddingHorizontal="7dp"
+            android:paddingVertical="3dp"
+            android:textColor="#4B5563"
+            android:textSize="10sp"
+            android:includeFontPadding="false"
+            tools:text="更新于 15:06:00" />
+    </LinearLayout>
+
+    <!-- 分割线 -->
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:background="#E2E8F0" />
+
+    <!-- 2. 底栏：左侧供应商图标，右侧粗体预警提示文本 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/iv_alert_provider_icon"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginEnd="10dp"
+            android:contentDescription="Provider Icon"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_brand_deepseek" />
+
+        <TextView
+            android:id="@+id/tv_alert_message"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="#DC2626"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:includeFontPadding="false"
+            tools:text="DeepSeek 余额不足，请合理规划使用或充值。" />
+    </LinearLayout>
+
+</LinearLayout>

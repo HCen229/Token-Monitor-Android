@@ -32,7 +32,10 @@ data class IslandConfig(
     val rightItem: IslandItemType = IslandItemType.TODAY_TOKENS,
     val showIcon: Boolean = true,
     val selectedProvider: String = "auto",
-    val quotaMode: String = "auto"
+    val quotaMode: String = "auto",
+    val quotaAlertEnabled: Boolean = true,
+    val quotaAlertThresholdPercent: Int = 20,
+    val balanceAlertThresholdCny: Double = 2.0
 ) {
     fun toJson(): String {
         val obj = JSONObject()
@@ -41,6 +44,9 @@ data class IslandConfig(
         obj.put("showIcon", showIcon)
         obj.put("provider", selectedProvider)
         obj.put("quotaMode", quotaMode)
+        obj.put("quotaAlertEnabled", quotaAlertEnabled)
+        obj.put("quotaAlertThresholdPercent", quotaAlertThresholdPercent)
+        obj.put("balanceAlertThresholdCny", balanceAlertThresholdCny)
         return obj.toString()
     }
 
@@ -50,7 +56,10 @@ data class IslandConfig(
             rightItem = IslandItemType.TODAY_TOKENS,
             showIcon = true,
             selectedProvider = "auto",
-            quotaMode = "auto"
+            quotaMode = "auto",
+            quotaAlertEnabled = true,
+            quotaAlertThresholdPercent = 20,
+            balanceAlertThresholdCny = 2.0
         )
 
         fun fromJson(jsonStr: String?): IslandConfig {
@@ -61,13 +70,19 @@ data class IslandConfig(
                 val showIcon = obj.optBoolean("showIcon", true)
                 val provider = obj.optString("provider", "auto")
                 val quotaMode = obj.optString("quotaMode", "auto")
+                val alertEnabled = obj.optBoolean("quotaAlertEnabled", true)
+                val quotaThreshold = obj.optInt("quotaAlertThresholdPercent", 20)
+                val balanceThreshold = obj.optDouble("balanceAlertThresholdCny", 2.0)
 
                 IslandConfig(
                     leftItem = IslandItemType.STATUS, // Locked to working status
                     rightItem = right,
                     showIcon = showIcon,
                     selectedProvider = provider,
-                    quotaMode = quotaMode
+                    quotaMode = quotaMode,
+                    quotaAlertEnabled = alertEnabled,
+                    quotaAlertThresholdPercent = quotaThreshold,
+                    balanceAlertThresholdCny = balanceThreshold
                 )
             } catch (_: Throwable) {
                 DEFAULT

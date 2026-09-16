@@ -560,6 +560,160 @@ fun SettingsScreen(
                     }
                 )
 
+                // Super Island Quota Alert Studio Card
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isThemeLight) Color(0xFFF8FAFC) else Color(0x18FFFFFF))
+                        .border(1.dp, if (isThemeLight) Color(0xFFE2E8F0) else Color(0x22FFFFFF), RoundedCornerShape(10.dp))
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Title & Toggle Switch
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                            Text(
+                                text = strings.islandQuotaAlertCardTitle,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TmTextPrimary
+                            )
+                            Text(
+                                text = strings.islandQuotaAlertCardDesc,
+                                fontSize = 11.sp,
+                                color = TmTextMuted,
+                                lineHeight = 15.sp
+                            )
+                        }
+                        androidx.compose.material3.Switch(
+                            checked = islandConfig.quotaAlertEnabled,
+                            onCheckedChange = { enabled ->
+                                viewModel.updateIslandConfig(islandConfig.copy(quotaAlertEnabled = enabled))
+                            },
+                            colors = androidx.compose.material3.SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = TmAccent
+                            )
+                        )
+                    }
+
+                    if (islandConfig.quotaAlertEnabled) {
+                        // Usage Threshold Selection (10%, 15%, 20%, 25%, 30%)
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = strings.islandQuotaAlertUsageThreshold,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF64D2FF)
+                            )
+                            val usageOptions = listOf(10, 15, 20, 25, 30)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isThemeLight) Color(0xFFE2E8F0) else Color(0x18FFFFFF))
+                                    .padding(2.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                usageOptions.forEach { pct ->
+                                    val isSelected = islandConfig.quotaAlertThresholdPercent == pct
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(
+                                                if (isSelected) TmAccent else Color.Transparent
+                                            )
+                                            .clickable {
+                                                viewModel.updateIslandConfig(islandConfig.copy(quotaAlertThresholdPercent = pct))
+                                            }
+                                            .padding(vertical = 6.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "$pct%",
+                                            fontSize = 11.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) Color(0xFF0F1115) else TmTextSecondary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Balance Threshold Selection (¥1, ¥2, ¥5, ¥10)
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = strings.islandQuotaAlertBalanceThreshold,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF34D399)
+                            )
+                            val balanceOptions = listOf(1.0, 2.0, 5.0, 10.0)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isThemeLight) Color(0xFFE2E8F0) else Color(0x18FFFFFF))
+                                    .padding(2.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                balanceOptions.forEach { bal ->
+                                    val isSelected = kotlin.math.abs(islandConfig.balanceAlertThresholdCny - bal) < 0.01
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(
+                                                if (isSelected) TmAccent else Color.Transparent
+                                            )
+                                            .clickable {
+                                                viewModel.updateIslandConfig(islandConfig.copy(balanceAlertThresholdCny = bal))
+                                            }
+                                            .padding(vertical = 6.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "¥${bal.toInt()}",
+                                            fontSize = 11.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) Color(0xFF0F1115) else TmTextSecondary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Test Quota Alert Button
+                        LiquidActionButton(
+                            onClick = {
+                                com.tokenmonitor.app.service.TokenNotificationManager.postTestQuotaAlert(context)
+                                val activity = when (context) {
+                                    is android.app.Activity -> context
+                                    is android.content.ContextWrapper -> context.baseContext as? android.app.Activity
+                                    else -> null
+                                }
+                                activity?.moveTaskToBack(true)
+                            },
+                            tone = LiquidButtonTone.SECONDARY,
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                            modifier = Modifier.fillMaxWidth().height(36.dp)
+                        ) {
+                            Text(
+                                text = strings.testIslandQuotaAlert,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+
                 // Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1270,7 +1424,7 @@ fun AcknowledgementsScreen(
                                     val isFont = tag == "内置字体" || tag == "Bundled Font"
                                     val isUpstream = tag == "上游原型" || tag == "Upstream Model"
                                     val isRef = tag == "技术参考" || tag == "Reference"
-                                    val isLicense = tag.contains("MIT") || tag.contains("OFL") || tag.contains("Apache") || tag.contains("GPL")
+                                    val isLicense = tag.contains("MIT") || tag.contains("OFL") || tag.contains("Apache") || tag.contains("GPL") || tag.contains("BSD")
 
                                     val bg = when {
                                         isOurs -> TmAccent.copy(alpha = 0.16f)

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 超级岛长按/点击展开态自定义布局 (暗色毛玻璃容器适配) -->
+<!-- 焦点通知自定义布局 - 亮色模式 (严格对照草图排版) -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/island_expanded_root"
+    android:id="@+id/focus_card_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -20,7 +20,6 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <!-- 应用图标 -->
         <ImageView
             android:id="@+id/iv_exp_app_logo"
             android:layout_width="32dp"
@@ -30,7 +29,6 @@
             android:scaleType="fitCenter"
             android:src="@drawable/ic_brand_token_monitor" />
 
-        <!-- 标题与状态 + 连接主机 -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -43,7 +41,7 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="#F3F4F6"
+                android:textColor="#111827"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:includeFontPadding="false"
@@ -56,22 +54,21 @@
                 android:layout_marginTop="2dp"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="#9CA3AF"
+                android:textColor="#6B7280"
                 android:textSize="11sp"
                 android:includeFontPadding="false"
                 tools:text="已连接至 111.111.111.111" />
         </LinearLayout>
 
-        <!-- 右侧微标：更新于 HH:mm:ss -->
         <TextView
             android:id="@+id/tv_exp_update_time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="6dp"
-            android:background="@drawable/bg_badge_timestamp_night"
+            android:background="@drawable/bg_badge_timestamp"
             android:paddingHorizontal="7dp"
             android:paddingVertical="3dp"
-            android:textColor="#D1D5DB"
+            android:textColor="#4B5563"
             android:textSize="10sp"
             android:includeFontPadding="false"
             tools:text="更新于 15:06:00" />
@@ -91,7 +88,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="今日 Token"
-            android:textColor="#9CA3AF"
+            android:textColor="#6B7280"
             android:textSize="13sp"
             android:includeFontPadding="false" />
 
@@ -109,10 +106,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="6dp"
-                android:background="@drawable/bg_badge_compact_tokens_night"
+                android:background="@drawable/bg_badge_compact_tokens_light"
                 android:paddingHorizontal="6dp"
                 android:paddingVertical="2dp"
-                android:textColor="#38BDF8"
+                android:textColor="#0284C7"
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:fontFamily="sans-serif-medium"
@@ -126,7 +123,7 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="#FFFFFF"
+                android:textColor="#111827"
                 android:textSize="22sp"
                 android:textStyle="bold"
                 android:fontFamily="sans-serif-black"
@@ -141,10 +138,10 @@
         android:layout_height="1dp"
         android:layout_marginTop="7dp"
         android:layout_marginBottom="7dp"
-        android:background="#2E3748"
+        android:background="#E5E7EB"
         android:contentDescription="@null" />
 
-    <!-- 4. 底栏：双供应商模式 (并排左右两列各占50%) -->
+    <!-- 4. 底栏：双供应商模式 -->
     <LinearLayout
         android:id="@+id/layout_two_providers"
         android:layout_width="match_parent"
@@ -180,7 +177,7 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="#F3F4F6"
+                    android:textColor="#111827"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:includeFontPadding="false"
@@ -193,7 +190,7 @@
                     android:layout_marginTop="1dp"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="#38BDF8"
+                    android:textColor="#0284C7"
                     android:textSize="10sp"
                     android:includeFontPadding="false"
                     tools:text="10% | 03:21:11 后重置" />
@@ -205,7 +202,7 @@
                     android:layout_marginTop="1dp"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="#9CA3AF"
+                    android:textColor="#6B7280"
                     android:textSize="10sp"
                     android:includeFontPadding="false"
                     tools:text="已使用 123M Token" />
@@ -241,7 +238,7 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="#F3F4F6"
+                    android:textColor="#111827"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:includeFontPadding="false"
@@ -254,7 +251,7 @@
                     android:layout_marginTop="1dp"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="#34D399"
+                    android:textColor="#059669"
                     android:textSize="10sp"
                     android:includeFontPadding="false"
                     tools:text="79.92 ¥ | 正常时段" />
@@ -266,7 +263,7 @@
                     android:layout_marginTop="1dp"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="#9CA3AF"
+                    android:textColor="#6B7280"
                     android:textSize="10sp"
                     android:includeFontPadding="false"
                     tools:text="已使用 122M Token" />
@@ -303,7 +300,7 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="#F3F4F6"
+                android:textColor="#111827"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:includeFontPadding="false"
@@ -316,7 +313,7 @@
                 android:layout_marginTop="1dp"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="#38BDF8"
+                android:textColor="#0284C7"
                 android:textSize="11sp"
                 android:includeFontPadding="false"
                 tools:text="79.92 ¥ | 梁文峰时段" />
@@ -328,7 +325,7 @@
                 android:layout_marginTop="1dp"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="#9CA3AF"
+                android:textColor="#6B7280"
                 android:textSize="11sp"
                 android:includeFontPadding="false"
                 tools:text="已使用 122M Token" />

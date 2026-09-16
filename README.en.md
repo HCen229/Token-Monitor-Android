@@ -317,6 +317,7 @@ Some systems hide the notification category list until the app has actually post
 - **Architecture references**:
   - [jizizr/signaldock](https://github.com/jizizr/signaldock) — reference for the punch-hole left/right chamber separation design (MIT)
   - [FrancoGiudans/Capsulyric](https://github.com/FrancoGiudans/Capsulyric) — technical reference for status bar notification capsule interoperability (GPL-3.0)
+  - [MUKAPP/CustomLand](https://github.com/MUKAPP/CustomLand) — reference for Android Dynamic Island and Live Updates status bar notifications (BSD-3-Clause)
 
 ---
 

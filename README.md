@@ -319,6 +319,7 @@ Token-Monitor-Android/
 - **架构参考**：
   - [jizizr/signaldock](https://github.com/jizizr/signaldock) — 打孔屏左右腔体分离设计参考 (MIT)
   - [FrancoGiudans/Capsulyric](https://github.com/FrancoGiudans/Capsulyric) — 状态栏通知胶囊互操作性技术参考 (GPL-3.0)
+  - [MUKAPP/CustomLand](https://github.com/MUKAPP/CustomLand) — Android 灵动岛与 Live Updates 状态栏通知设计参考 (BSD-3-Clause)
 
 ---
 

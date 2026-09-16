@@ -84,12 +84,31 @@ class TokenMonitorService : Service() {
         return START_STICKY
     }
 
+    fun restartPollLoop() {
+        startBackgroundPolling()
+    }
+
+    suspend fun performPoll(forceNotification: Boolean = false) {
+        withTransientWakeLock(5000L) {
+            try {
+                val result = repository.fetchStats(forceDirectRefresh = false)
+                result.onSuccess { stats ->
+                    TokenNotificationManager.updateStats(applicationContext, stats, isConnected = true, force = forceNotification)
+                }.onFailure {
+                    TokenNotificationManager.updateStats(applicationContext, TokenNotificationManager.cachedStats, isConnected = false, force = forceNotification)
+                }
+            } catch (e: Throwable) {
+                Log.w(TAG, "performPoll error: ${e.message}")
+            }
+        }
+    }
+
     private fun startBackgroundPolling() {
         pollJob?.cancel()
         pollJob = serviceScope.launch {
             while (isActive) {
                 try {
-                    // Requirement 2: Screen OFF handling - freeze polling and retain previous data
+                    // Screen OFF handling - freeze polling and retain previous data
                     if (!ScreenStateManager.isInteractive(applicationContext)) {
                         Log.d(TAG, "Screen is OFF (息屏). Retaining data and pausing background sync.")
                         // Suspend until screen turns ON
@@ -98,31 +117,19 @@ class TokenMonitorService : Service() {
                     }
 
                     val isForeground = com.tokenmonitor.app.TokenMonitorApp.isAppInForeground
-                    val config = repository.getConfig()
 
                     if (isForeground) {
-                        // When app is in foreground, MainViewModel is actively fetching data and updating UI + notification.
-                        // Service sleeps to prevent duplicate HTTP requests and save CPU/battery!
-                        delay(config.refreshIntervalSec.coerceAtLeast(1) * 1000L)
+                        // When app is in foreground, MainViewModel is actively fetching data.
+                        delay(1000L)
                         continue
                     }
 
-                    // Background polling (while screen is ON):
-                    // Safely acquire transient wake lock during network execution, then release immediately
-                    withTransientWakeLock(8000L) {
-                        val result = repository.fetchStats()
-                        result.onSuccess { stats ->
-                            TokenNotificationManager.updateStats(applicationContext, stats, isConnected = true)
-                        }.onFailure {
-                            TokenNotificationManager.updateStats(applicationContext, TokenNotificationManager.cachedStats, isConnected = false)
-                        }
-                    }
-
-                    // Sleep 45s or until cancelled
-                    delay(45_000L)
+                    // Continuous 1-second refresh for Super Island & Notification when screen is interactive
+                    performPoll(forceNotification = true)
+                    delay(1000L)
                 } catch (e: Throwable) {
                     Log.w(TAG, "Background poll loop error: ${e.message}")
-                    delay(15000L)
+                    delay(2000L)
                 }
             }
         }
@@ -184,7 +191,30 @@ class TokenMonitorService : Service() {
         var instance: TokenMonitorService? = null
             private set
 
+        @Volatile
+        var fastRefreshUntil: Long = 0L
+
         fun isRunning(): Boolean = instance != null
+
+        fun isFastRefreshActive(): Boolean {
+            val ctx = instance?.applicationContext ?: return true
+            return ScreenStateManager.isInteractive(ctx)
+        }
+
+        fun triggerFastRefresh(durationMs: Long = 60_000L) {
+            val until = System.currentTimeMillis() + durationMs
+            if (until > fastRefreshUntil) {
+                fastRefreshUntil = until
+            }
+            Log.i(TAG, "triggerFastRefresh: fast 1s refresh triggered")
+
+            instance?.let { service ->
+                service.serviceScope.launch {
+                    service.performPoll(forceNotification = true)
+                }
+                service.restartPollLoop()
+            }
+        }
 
         fun start(context: Context) {
             try {
@@ -202,12 +232,7 @@ class TokenMonitorService : Service() {
         fun triggerImmediatePoll() {
             instance?.let { service ->
                 service.serviceScope.launch {
-                    try {
-                        val result = service.repository.fetchStats()
-                        result.onSuccess { stats ->
-                            TokenNotificationManager.updateStats(service.applicationContext, stats, isConnected = true)
-                        }
-                    } catch (_: Throwable) {}
+                    service.performPoll(forceNotification = true)
                 }
             }
         }

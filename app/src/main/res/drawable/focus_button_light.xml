@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 焦点通知按钮背景 - 亮色模式 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#1A57A2DB" />
+    <corners android:radius="20dp" />
+</shape>

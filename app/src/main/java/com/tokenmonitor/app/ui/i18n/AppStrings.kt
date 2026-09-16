@@ -160,6 +160,11 @@ interface AppStrings {
     val systemNotificationSettings: String
     val liveNotificationSwitch: String
     val liveNotificationSwitchDesc: String
+    val islandQuotaAlertCardTitle: String
+    val islandQuotaAlertCardDesc: String
+    val islandQuotaAlertUsageThreshold: String
+    val islandQuotaAlertBalanceThreshold: String
+    val testIslandQuotaAlert: String
 
     val softwareUpdate: String
     val githubOfficial: String
@@ -427,6 +432,11 @@ object ZhStrings : AppStrings {
     override val systemNotificationSettings: String = "系统通知设置"
     override val liveNotificationSwitch: String = "实时通知开关"
     override val liveNotificationSwitchDesc: String = "在状态栏与锁屏持续展示实时用量"
+    override val islandQuotaAlertCardTitle: String = "超级岛余量预警"
+    override val islandQuotaAlertCardDesc: String = "模型供应商额度或余额不足时以超级岛弹窗提醒"
+    override val islandQuotaAlertUsageThreshold: String = "剩余用量预警阈值 (低于)"
+    override val islandQuotaAlertBalanceThreshold: String = "账户余额预警阈值 (低于)"
+    override val testIslandQuotaAlert: String = "测试超级岛余量提醒"
 
     override val softwareUpdate: String = "软件更新"
     override val githubOfficial: String = "GitHub 正式版"
@@ -609,6 +619,13 @@ object ZhStrings : AppStrings {
             url = "https://github.com/FrancoGiudans/Capsulyric",
             description = "针对国产系统（ColorOS 流体云、HyperOS 焦点通知等）私有状态栏通知 Extras 键名与协议参数提供互操作性技术参考。",
             tags = listOf("技术参考", "GPL-3.0")
+        ),
+        CreditItem(
+            name = "CustomLand",
+            repo = "MUKAPP/CustomLand",
+            url = "https://github.com/MUKAPP/CustomLand",
+            description = "基于 AI 的 Android 截图信息识别与提取工具，支持视觉模型、OCR + 文本模型、灵动岛与 Live Updates 实时通知。",
+            tags = listOf("技术参考", "BSD-3-Clause")
         )
     )
 }
@@ -841,6 +858,11 @@ object EnStrings : AppStrings {
     override val systemNotificationSettings: String = "System Settings"
     override val liveNotificationSwitch: String = "Live Notification Switch"
     override val liveNotificationSwitchDesc: String = "Continuously display usage in status bar & lock screen"
+    override val islandQuotaAlertCardTitle: String = "Super Island Quota Alert"
+    override val islandQuotaAlertCardDesc: String = "Pop up Super Island banner when provider quota or balance is low"
+    override val islandQuotaAlertUsageThreshold: String = "Quota Alert Threshold (Below)"
+    override val islandQuotaAlertBalanceThreshold: String = "Balance Alert Threshold (Below)"
+    override val testIslandQuotaAlert: String = "Test Island Quota Alert"
 
     override val softwareUpdate: String = "Software Update"
     override val githubOfficial: String = "GitHub Official"
@@ -1027,6 +1049,13 @@ object EnStrings : AppStrings {
             url = "https://github.com/FrancoGiudans/Capsulyric",
             description = "Technical reference for OEM status bar notifications (ColorOS Fluid Cloud, HyperOS Focus Notification) Extras parameters and interoperability.",
             tags = listOf("Reference", "GPL-3.0")
+        ),
+        CreditItem(
+            name = "CustomLand",
+            repo = "MUKAPP/CustomLand",
+            url = "https://github.com/MUKAPP/CustomLand",
+            description = "AI-powered Android screenshot information extraction tool supporting vision models, OCR + text models, Dynamic Island, and Live Updates.",
+            tags = listOf("Reference", "BSD-3-Clause")
         )
     )
 }
